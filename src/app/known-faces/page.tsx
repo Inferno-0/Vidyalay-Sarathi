@@ -5,7 +5,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { ArrowLeft, Trash2, Loader2 } from 'lucide-react';
+import { ArrowLeft, Trash2, Loader2, Camera } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Dialog, DialogContent, DialogHeader, DialogTitle as DialogTitleComponent, DialogFooter } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
@@ -70,12 +70,20 @@ export default function KnownFacesPage() {
       <div className="w-full max-w-4xl mx-auto">
         <div className="flex items-center justify-between mb-6">
             <h1 className="text-3xl font-bold">Known Faces</h1>
-            <Button asChild variant="outline">
-                <Link href="/">
-                    <ArrowLeft className="mr-2 h-4 w-4" />
-                    Back to Home
-                </Link>
-            </Button>
+            <div className="flex gap-2">
+                <Button asChild variant="outline">
+                    <Link href="/scanner">
+                        <Camera className="mr-2 h-4 w-4" />
+                        Back to Scanner
+                    </Link>
+                </Button>
+                <Button asChild variant="outline">
+                    <Link href="/">
+                        <ArrowLeft className="mr-2 h-4 w-4" />
+                        Back to Home
+                    </Link>
+                </Button>
+            </div>
         </div>
 
         {loading ? (
