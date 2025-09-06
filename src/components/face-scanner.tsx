@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Loader, Camera, CameraSwitch } from 'lucide-react';
+import { Loader, Camera, SwitchCamera } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { getKnownFaces, saveKnownFace } from '@/app/actions';
 
@@ -324,7 +324,7 @@ const FaceScanner = () => {
             size="icon"
             className="absolute top-4 left-4 z-20"
         >
-            <CameraSwitch className="h-5 w-5" />
+            <SwitchCamera className="h-5 w-5" />
             <span className="sr-only">Switch Camera</span>
         </Button>
       )}
@@ -378,3 +378,5 @@ const FaceScanner = () => {
 };
 
 export default FaceScanner;
+
+    
