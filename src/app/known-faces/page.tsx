@@ -2,14 +2,16 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Card, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { ArrowLeft, User } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import Image from 'next/image';
 
 interface KnownFace {
   label: string;
+  image: string;
 }
 
 export default function KnownFacesPage() {
@@ -43,13 +45,19 @@ export default function KnownFacesPage() {
         ) : knownFaces.length > 0 ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
             {knownFaces.map((face, index) => (
-              <Card key={index} className="text-center">
-                <CardHeader>
-                  <div className="flex justify-center mb-2">
-                    <div className="p-3 rounded-full bg-primary/10">
-                      <User className="w-8 h-8 text-primary" />
-                    </div>
+              <Card key={index} className="text-center overflow-hidden">
+                <CardContent className="p-0">
+                  <div className="relative w-full aspect-square">
+                     <Image 
+                        src={face.image} 
+                        alt={face.label} 
+                        layout="fill"
+                        objectFit="cover"
+                        data-ai-hint="person face"
+                        />
                   </div>
+                </CardContent>
+                <CardHeader className="p-4">
                   <CardTitle className="text-lg">{face.label}</CardTitle>
                 </CardHeader>
               </Card>

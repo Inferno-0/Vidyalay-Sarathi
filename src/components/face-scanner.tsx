@@ -60,7 +60,6 @@ const FaceScanner = () => {
     const init = async () => {
         const modelsLoaded = await loadModels();
         if (modelsLoaded) {
-            // Load known faces from localStorage
             const savedFacesJson = localStorage.getItem('knownFaces');
             if (savedFacesJson) {
                 const savedFaces = JSON.parse(savedFacesJson);
@@ -74,7 +73,7 @@ const FaceScanner = () => {
             }
             startVideo();
         } else {
-            setTimeout(init, 1000); // Retry if faceapi is not ready
+            setTimeout(init, 1000); 
         }
     };
     init();
@@ -180,24 +179,34 @@ const FaceScanner = () => {
             return;
         }
 
-        const newKnownFace = new faceapi.LabeledFaceDescriptors(newFaceName, [detection.descriptor]);
-        const updatedKnownFaces = [...knownFaces, newKnownFace];
-        setKnownFaces(updatedKnownFaces);
+        const newKnownFaceDescriptor = new faceapi.LabeledFaceDescriptors(newFaceName, [detection.descriptor]);
+        setKnownFaces(prev => [...prev, newKnownFaceDescriptor]);
 
-        const facesToSave = updatedKnownFaces.map(face => ({
-            label: face.label,
-            descriptors: face.descriptors.map(d => Array.from(d))
-        }));
-        localStorage.setItem('knownFaces', JSON.stringify(facesToSave));
+        const savedFacesJson = localStorage.getItem('knownFaces');
+        const savedFaces = savedFacesJson ? JSON.parse(savedFacesJson) : [];
+        
+        const newFaceToSave = {
+            label: newFaceName,
+            image: capturedImage,
+            descriptors: [Array.from(detection.descriptor)]
+        };
+
+        const existingFaceIndex = savedFaces.findIndex((face: any) => face.label === newFaceName);
+
+        if(existingFaceIndex > -1) {
+            savedFaces[existingFaceIndex].descriptors.push(Array.from(detection.descriptor));
+        } else {
+            savedFaces.push(newFaceToSave);
+        }
+
+        localStorage.setItem('knownFaces', JSON.stringify(savedFaces));
 
         toast({
             title: "Face Saved!",
             description: `${newFaceName} has been added to your known faces.`,
         });
         
-        setIsDialogOpen(false);
-        setNewFaceName('');
-        setCapturedImage(null);
+        closeDialog();
     }
   };
   
@@ -222,9 +231,8 @@ const FaceScanner = () => {
         muted
         playsInline
         className={`w-full h-full object-cover transition-opacity duration-500 ${isReady ? 'opacity-100' : 'opacity-0'}`}
-        style={{ transform: 'scaleX(-1)' }}
       />
-      <canvas ref={canvasRef} className="absolute inset-0 w-full h-full" style={{ transform: 'scaleX(-1)' }} />
+      <canvas ref={canvasRef} className="absolute inset-0 w-full h-full" />
 
        {isReady && (
         <div className="absolute top-4 right-4 z-20">
