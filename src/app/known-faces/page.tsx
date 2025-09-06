@@ -76,16 +76,14 @@ export default function KnownFacesPage() {
 
       <Dialog open={!!selectedFace} onOpenChange={() => setSelectedFace(null)}>
         <DialogContent className="sm:max-w-md">
-            {selectedFace && (
-                <>
-                    <DialogHeader>
-                        <DialogTitleComponent className="text-2xl">{selectedFace.label}</DialogTitleComponent>
-                    </DialogHeader>
-                    <div className="flex justify-center p-4">
-                        <img src={selectedFace.image} alt={selectedFace.label} className="rounded-md w-full h-auto object-cover" />
-                    </div>
-                </>
-            )}
+          <DialogHeader>
+            {selectedFace && <DialogTitleComponent className="text-2xl">{selectedFace.label}</DialogTitleComponent>}
+          </DialogHeader>
+          {selectedFace && (
+            <div className="flex justify-center p-4">
+                <img src={selectedFace.image} alt={selectedFace.label} className="rounded-md w-full h-auto object-cover" />
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </main>
