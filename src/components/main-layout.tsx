@@ -4,7 +4,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { Menu, Home, Camera, Users } from 'lucide-react';
 
 interface MainLayoutProps {
@@ -31,6 +31,9 @@ export default function MainLayout({ children, title }: MainLayoutProps) {
               </Button>
             </SheetTrigger>
             <SheetContent side="left" className="w-[240px]">
+              <SheetHeader>
+                <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
+              </SheetHeader>
               <nav className="flex flex-col gap-4 mt-8">
                 {navLinks.map(link => (
                   <Link
@@ -51,8 +54,8 @@ export default function MainLayout({ children, title }: MainLayoutProps) {
           </div>
         </div>
       </header>
-      <main className="flex flex-1 flex-col items-center p-4 sm:p-8">
-        <div className="w-full max-w-4xl mx-auto flex flex-col items-center">
+      <main className="flex-1 flex flex-col items-center p-4 sm:p-8">
+        <div className="flex-1 w-full max-w-4xl mx-auto flex flex-col items-center">
           <h1 className="hidden md:block text-3xl font-bold mb-6 self-start">{title}</h1>
           {children}
         </div>
