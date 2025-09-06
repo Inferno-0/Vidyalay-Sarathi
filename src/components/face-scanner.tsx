@@ -14,6 +14,12 @@ declare const faceapi: any;
 
 const MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model/';
 
+interface SavedFace {
+    label: string;
+    image: string;
+    descriptors: number[][];
+}
+
 const FaceScanner = () => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -49,10 +55,27 @@ const FaceScanner = () => {
       const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
+        videoRef.current.style.transform = 'scaleX(-1)';
       }
     } catch (err) {
       console.error('Error accessing camera:', err);
       setLoadingMessage('Camera access denied. Please enable camera permissions.');
+    }
+  }, []);
+  
+  const loadKnownFaces = useCallback(async () => {
+    if (typeof faceapi === 'undefined') return;
+    const savedFacesJson = localStorage.getItem('knownFaces');
+    if (savedFacesJson) {
+      const savedFaces: SavedFace[] = JSON.parse(savedFacesJson);
+      
+      const loadedDescriptors = await Promise.all(savedFaces.map(async (face) => {
+        const descriptors = await Promise.all(
+          face.descriptors.map(d => new Float32Array(d))
+        );
+        return new faceapi.LabeledFaceDescriptors(face.label, descriptors);
+      }));
+      setKnownFaces(loadedDescriptors);
     }
   }, []);
 
@@ -60,17 +83,7 @@ const FaceScanner = () => {
     const init = async () => {
         const modelsLoaded = await loadModels();
         if (modelsLoaded) {
-            const savedFacesJson = localStorage.getItem('knownFaces');
-            if (savedFacesJson) {
-                const savedFaces = JSON.parse(savedFacesJson);
-                const loadedDescriptors = savedFaces.map((face: any) => 
-                    new faceapi.LabeledFaceDescriptors(
-                        face.label,
-                        face.descriptors.map((d: number[]) => new Float32Array(d))
-                    )
-                );
-                setKnownFaces(loadedDescriptors);
-            }
+            await loadKnownFaces();
             startVideo();
         } else {
             setTimeout(init, 1000); 
@@ -83,7 +96,7 @@ const FaceScanner = () => {
             clearInterval(detectionInterval.current);
         }
     }
-  }, [loadModels, startVideo]);
+  }, [loadModels, startVideo, loadKnownFaces]);
 
 
   const handlePlay = useCallback(() => {
@@ -101,6 +114,7 @@ const FaceScanner = () => {
 
       const displaySize = { width: video.clientWidth, height: video.clientHeight };
       faceapi.matchDimensions(canvas, displaySize);
+      canvas.getContext('2d')?.clearRect(0, 0, canvas.width, canvas.height);
 
       const detections = await faceapi
         .detectAllFaces(video, new faceapi.TinyFaceDetectorOptions())
@@ -108,8 +122,12 @@ const FaceScanner = () => {
         .withFaceDescriptors();
 
       const resizedDetections = faceapi.resizeResults(detections, displaySize);
-      canvas.getContext('2d')?.clearRect(0, 0, canvas.width, canvas.height);
-
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.translate(canvas.width, 0);
+      ctx.scale(-1, 1);
+      
       let foundUnknownFace = false;
       if (resizedDetections.length > 0) {
         if (knownFaces.length > 0) {
@@ -154,7 +172,8 @@ const FaceScanner = () => {
       canvas.height = video.videoHeight;
       const context = canvas.getContext('2d');
       if (context) {
-        context.drawImage(video, 0, 0, canvas.width, canvas.height);
+        context.scale(-1, 1);
+        context.drawImage(video, 0, 0, -canvas.width, canvas.height);
         const dataUrl = canvas.toDataURL('image/jpeg');
         setCapturedImage(dataUrl);
         setIsDialogOpen(true);
@@ -178,28 +197,27 @@ const FaceScanner = () => {
             });
             return;
         }
-
-        const newKnownFaceDescriptor = new faceapi.LabeledFaceDescriptors(newFaceName, [detection.descriptor]);
-        setKnownFaces(prev => [...prev, newKnownFaceDescriptor]);
+        
+        const descriptorArray = Array.from(detection.descriptor);
 
         const savedFacesJson = localStorage.getItem('knownFaces');
-        const savedFaces = savedFacesJson ? JSON.parse(savedFacesJson) : [];
+        const savedFaces: SavedFace[] = savedFacesJson ? JSON.parse(savedFacesJson) : [];
         
-        const newFaceToSave = {
-            label: newFaceName,
-            image: capturedImage,
-            descriptors: [Array.from(detection.descriptor)]
-        };
-
-        const existingFaceIndex = savedFaces.findIndex((face: any) => face.label === newFaceName);
+        const existingFaceIndex = savedFaces.findIndex((face: SavedFace) => face.label === newFaceName);
 
         if(existingFaceIndex > -1) {
-            savedFaces[existingFaceIndex].descriptors.push(Array.from(detection.descriptor));
+            savedFaces[existingFaceIndex].descriptors.push(descriptorArray);
         } else {
-            savedFaces.push(newFaceToSave);
+            savedFaces.push({
+                label: newFaceName,
+                image: capturedImage,
+                descriptors: [descriptorArray]
+            });
         }
 
         localStorage.setItem('knownFaces', JSON.stringify(savedFaces));
+        
+        await loadKnownFaces();
 
         toast({
             title: "Face Saved!",
