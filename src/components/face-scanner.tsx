@@ -7,8 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Loader, Camera, Users } from 'lucide-react';
-import Link from 'next/link';
+import { Loader, Camera } from 'lucide-react';
 
 declare const faceapi: any;
 
@@ -67,10 +66,14 @@ const FaceScanner = () => {
         const savedFaces: SavedFace[] = JSON.parse(savedFacesJson);
         const labeledFaceDescriptors = await Promise.all(
             savedFaces.map(async (face) => {
-                const img = await faceapi.fetchImage(face.image);
-                const detection = await faceapi.detectSingleFace(img, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceDescriptor();
-                if (detection) {
-                    return new faceapi.LabeledFaceDescriptors(face.label, [detection.descriptor]);
+                try {
+                    const img = await faceapi.fetchImage(face.image);
+                    const detection = await faceapi.detectSingleFace(img, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceDescriptor();
+                    if (detection) {
+                        return new faceapi.LabeledFaceDescriptors(face.label, [detection.descriptor]);
+                    }
+                } catch (e) {
+                    console.error("Error loading saved face:", face.label, e)
                 }
                 return null;
             })
@@ -248,17 +251,6 @@ const FaceScanner = () => {
         className={`w-full h-full object-cover transition-opacity duration-500 ${isReady ? 'opacity-100' : 'opacity-0'}`}
       />
       <canvas ref={canvasRef} className="absolute inset-0 w-full h-full" />
-
-       {isReady && (
-        <div className="absolute top-4 right-4 z-20">
-            <Button asChild>
-                <Link href="/known-faces">
-                    <Users className="mr-2 h-5 w-5" />
-                    Known Faces
-                </Link>
-            </Button>
-        </div>
-       )}
 
       {isReady && unknownFaceDetected && !isDialogOpen && (
          <Button 

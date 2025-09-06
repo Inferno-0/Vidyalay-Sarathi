@@ -3,8 +3,8 @@ import './globals.css';
 import { Toaster } from "@/components/ui/toaster"
 
 export const metadata: Metadata = {
-  title: 'Face Scanner',
-  description: 'Scan faces and keep records',
+  title: 'Attendance Tracker',
+  description: 'An AI-powered attendance tracking application',
 };
 
 export default function RootLayout({
