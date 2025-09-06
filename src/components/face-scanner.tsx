@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Loader, Camera, RefreshCw } from 'lucide-react';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { getKnownFaces, saveKnownFace } from '@/app/actions';
 
 declare const faceapi: any;
@@ -32,46 +33,49 @@ const FaceScanner = () => {
   const { toast } = useToast();
   const detectionInterval = useRef<NodeJS.Timeout>();
   const [facingMode, setFacingMode] = useState<'user' | 'environment'>('user');
+  const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
+
 
   const loadModels = useCallback(async () => {
     if (typeof faceapi === 'undefined') {
         setLoadingMessage('FaceAPI script not loaded yet. Retrying...');
+        setTimeout(loadModels, 1000);
         return false;
     }
-    setLoadingMessage('Loading models...');
-    await Promise.all([
-      faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
-      faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
-      faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL),
-    ]);
-    return true;
+    setLoadingMessage('Loading face detection models...');
+    try {
+        await Promise.all([
+          faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
+          faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
+          faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL),
+        ]);
+        return true;
+    } catch (error) {
+        console.error("Error loading models: ", error);
+        setLoadingMessage('Failed to load face detection models.');
+        return false;
+    }
   }, []);
 
   const startVideo = useCallback(async () => {
-    setLoadingMessage('Accessing camera...');
-    
-    // Stop any existing stream
     if (videoRef.current && videoRef.current.srcObject) {
       const stream = videoRef.current.srcObject as MediaStream;
       stream.getTracks().forEach(track => track.stop());
-      videoRef.current.srcObject = null;
     }
 
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: facingMode } });
+      setLoadingMessage('Accessing camera...');
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode } });
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
+        setHasCameraPermission(true);
       }
     } catch (err) {
       console.error('Error accessing camera:', err);
-      setLoadingMessage('Camera access denied. Please enable camera permissions.');
-      toast({
-          variant: 'destructive',
-          title: 'Camera Error',
-          description: 'Could not access camera. Please check permissions.',
-      });
+      setLoadingMessage('Camera access was denied. Please enable camera permissions in your browser settings.');
+      setHasCameraPermission(false);
     }
-  }, [toast, facingMode]);
+  }, [facingMode]);
   
   const loadKnownFaces = useCallback(async () => {
     if (typeof faceapi === 'undefined') return;
@@ -123,8 +127,6 @@ const FaceScanner = () => {
         if (modelsLoaded) {
             await loadKnownFaces();
             await startVideo();
-        } else {
-            setTimeout(init, 1000); 
         }
     };
     init();
@@ -138,7 +140,7 @@ const FaceScanner = () => {
         stream.getTracks().forEach(track => track.stop());
       }
     }
-  }, []);
+  }, [loadModels, loadKnownFaces, startVideo]);
 
   // Restart video when facingMode changes
   useEffect(() => {
@@ -179,35 +181,22 @@ const FaceScanner = () => {
       
       let foundUnknownFace = false;
       if (resizedDetections.length > 0) {
-        if (knownFaces.length > 0) {
-          const faceMatcher = new faceapi.FaceMatcher(knownFaces, 0.6);
-          
-          resizedDetections.forEach((detection: any) => {
-            const { descriptor } = detection;
-            const bestMatch = faceMatcher.findBestMatch(descriptor);
-            const box = detection.detection.box;
-            const drawBox = new faceapi.draw.DrawBox(box, { 
-              label: bestMatch.toString(),
-              boxColor: bestMatch.label !== 'unknown' ? '#2ECC71' : '#E74C3C',
-            });
-            drawBox.draw(canvas);
+        const faceMatcher = new faceapi.FaceMatcher(knownFaces, 0.6);
+        
+        resizedDetections.forEach((detection: any) => {
+          const { descriptor } = detection;
+          const bestMatch = faceMatcher.findBestMatch(descriptor);
+          const box = detection.detection.box;
+          const drawBox = new faceapi.draw.DrawBox(box, { 
+            label: bestMatch.toString(),
+            boxColor: bestMatch.label !== 'unknown' ? '#2ECC71' : '#E74C3C',
+          });
+          drawBox.draw(canvas);
 
-            if (bestMatch.label === 'unknown') {
-              foundUnknownFace = true;
-            }
-          });
-        } else {
-          // If there are no known faces, any detected face is unknown
-          foundUnknownFace = true;
-          resizedDetections.forEach((detection: any) => {
-              const box = detection.detection.box;
-              const drawBox = new faceapi.draw.DrawBox(box, { 
-                label: 'unknown',
-                boxColor: '#E74C3C'
-              });
-              drawBox.draw(canvas);
-          });
-        }
+          if (bestMatch.label === 'unknown') {
+            foundUnknownFace = true;
+          }
+        });
       }
       setUnknownFaceDetected(foundUnknownFace);
     }, 1000);
@@ -222,7 +211,6 @@ const FaceScanner = () => {
       canvas.height = video.videoHeight;
       const context = canvas.getContext('2d');
       if (context) {
-        // Flip the canvas horizontally only if it's the front camera
         if (facingMode === 'user') {
             context.translate(canvas.width, 0);
             context.scale(-1, 1);
@@ -275,12 +263,24 @@ const FaceScanner = () => {
 
   return (
     <div className="relative w-full h-full bg-card flex items-center justify-center">
-      {!isReady && (
+      {hasCameraPermission === false && (
+         <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-background/80 backdrop-blur-sm p-4">
+             <Alert variant="destructive" className="max-w-md">
+              <AlertTitle>Camera Access Denied</AlertTitle>
+              <AlertDescription>
+                Please enable camera permissions in your browser settings to use this feature. You may need to refresh the page after granting permissions.
+              </AlertDescription>
+            </Alert>
+         </div>
+      )}
+
+      {loadingMessage && (
         <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-background/80 backdrop-blur-sm">
           <Loader className="h-12 w-12 animate-spin text-primary mb-4" />
           <p className="text-lg text-muted-foreground">{loadingMessage}</p>
         </div>
       )}
+
       <video
         ref={videoRef}
         onPlay={handlePlay}
@@ -291,7 +291,7 @@ const FaceScanner = () => {
       />
       <canvas ref={canvasRef} className={`absolute inset-0 w-full h-full ${facingMode === 'user' ? 'transform scale-x-[-1]' : ''}`} />
       
-      {isReady && (
+      {isReady && hasCameraPermission && (
         <Button 
             onClick={toggleCamera}
             variant="outline"

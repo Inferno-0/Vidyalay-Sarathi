@@ -25,7 +25,7 @@ export default function MainLayout({ children, title }: MainLayoutProps) {
         <div className="container flex h-14 max-w-4xl items-center">
           <Sheet>
             <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" className="mr-2 md:hidden">
+              <Button variant="ghost" size="icon" className="mr-2">
                 <Menu className="h-6 w-6" />
                 <span className="sr-only">Toggle Menu</span>
               </Button>
@@ -46,22 +46,7 @@ export default function MainLayout({ children, title }: MainLayoutProps) {
             </SheetContent>
           </Sheet>
           
-          <div className="hidden md:flex items-center gap-6">
-             <Link href="/" className="text-xl font-bold mr-4">
-                AI Attendance
-             </Link>
-             {navLinks.map(link => (
-                <Link
-                    key={link.href}
-                    href={link.href}
-                    className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary"
-                >
-                    {link.label}
-                </Link>
-             ))}
-          </div>
-
-          <div className="flex-1 md:hidden">
+          <div className="flex-1">
             <h1 className="text-xl font-bold">{title}</h1>
           </div>
         </div>
