@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Loader, Camera, RefreshCw } from 'lucide-react';
+import { Loader, Camera, CameraSwitch } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { getKnownFaces, saveKnownFace } from '@/app/actions';
 
@@ -57,25 +57,39 @@ const FaceScanner = () => {
     }
   }, []);
 
-  const startVideo = useCallback(async () => {
+  const startVideo = useCallback(async (currentFacingMode: 'user' | 'environment') => {
+    // Stop any existing stream
     if (videoRef.current && videoRef.current.srcObject) {
-      const stream = videoRef.current.srcObject as MediaStream;
-      stream.getTracks().forEach(track => track.stop());
+        const stream = videoRef.current.srcObject as MediaStream;
+        stream.getTracks().forEach(track => track.stop());
+        videoRef.current.srcObject = null;
     }
 
+    // A small delay to allow hardware to be released
+    await new Promise(resolve => setTimeout(resolve, 100));
+
     try {
-      setLoadingMessage('Accessing camera...');
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode } });
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        setHasCameraPermission(true);
-      }
+        setLoadingMessage('Accessing camera...');
+        const stream = await navigator.mediaDevices.getUserMedia({ 
+            video: { 
+                facingMode: currentFacingMode 
+            } 
+        });
+        if (videoRef.current) {
+            videoRef.current.srcObject = stream;
+            setHasCameraPermission(true);
+        }
     } catch (err) {
-      console.error('Error accessing camera:', err);
-      setLoadingMessage('Camera access was denied. Please enable camera permissions in your browser settings.');
-      setHasCameraPermission(false);
+        console.error('Error accessing camera:', err);
+        setLoadingMessage(`Camera access denied. Please enable permissions.`);
+        setHasCameraPermission(false);
+        toast({
+            variant: 'destructive',
+            title: 'Camera Access Denied',
+            description: 'Could not access the camera. Please check your browser permissions.',
+        });
     }
-  }, [facingMode]);
+  }, [toast]);
   
   const loadKnownFaces = useCallback(async () => {
     if (typeof faceapi === 'undefined') return;
@@ -126,7 +140,7 @@ const FaceScanner = () => {
         const modelsLoaded = await loadModels();
         if (modelsLoaded) {
             await loadKnownFaces();
-            await startVideo();
+            await startVideo(facingMode);
         }
     };
     init();
@@ -140,13 +154,14 @@ const FaceScanner = () => {
         stream.getTracks().forEach(track => track.stop());
       }
     }
-  }, [loadModels, loadKnownFaces, startVideo]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Restart video when facingMode changes
   useEffect(() => {
-      if (isReady) { // Only restart if the video was already playing
-          startVideo();
-      }
+    if (isReady) { // Only restart if the video was already playing
+        startVideo(facingMode);
+    }
   }, [facingMode, isReady, startVideo]);
 
   const handlePlay = useCallback(() => {
@@ -180,7 +195,8 @@ const FaceScanner = () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       
       let foundUnknownFace = false;
-      if (resizedDetections.length > 0) {
+
+      if (knownFaces.length > 0 && resizedDetections.length > 0) {
         const faceMatcher = new faceapi.FaceMatcher(knownFaces, 0.6);
         
         resizedDetections.forEach((detection: any) => {
@@ -197,6 +213,16 @@ const FaceScanner = () => {
             foundUnknownFace = true;
           }
         });
+      } else if (resizedDetections.length > 0) {
+        foundUnknownFace = true;
+        resizedDetections.forEach((detection: any) => {
+            const box = detection.detection.box;
+            const drawBox = new faceapi.draw.DrawBox(box, { 
+              label: 'unknown',
+              boxColor: '#E74C3C',
+            });
+            drawBox.draw(canvas);
+          });
       }
       setUnknownFaceDetected(foundUnknownFace);
     }, 1000);
@@ -298,7 +324,7 @@ const FaceScanner = () => {
             size="icon"
             className="absolute top-4 left-4 z-20"
         >
-            <RefreshCw className="h-5 w-5" />
+            <CameraSwitch className="h-5 w-5" />
             <span className="sr-only">Switch Camera</span>
         </Button>
       )}
