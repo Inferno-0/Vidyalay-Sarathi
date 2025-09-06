@@ -48,6 +48,7 @@ export default function KnownFacesPage() {
               <Card key={index} className="text-center overflow-hidden">
                 <CardContent className="p-0">
                   <div className="relative w-full aspect-square">
+                    {face.image && (
                      <Image 
                         src={face.image} 
                         alt={face.label} 
@@ -55,6 +56,7 @@ export default function KnownFacesPage() {
                         objectFit="cover"
                         data-ai-hint="person face"
                         />
+                    )}
                   </div>
                 </CardContent>
                 <CardHeader className="p-4">
