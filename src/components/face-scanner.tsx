@@ -14,9 +14,9 @@ declare const faceapi: any;
 
 const MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model/';
 
-interface KnownFace {
+interface KnownFaceData {
     label: string;
-    image: string;
+    images: string[];
 }
 
 const FaceScanner = () => {
@@ -69,22 +69,29 @@ const FaceScanner = () => {
     
     try {
         setLoadingMessage('Loading known faces...');
-        const savedFaces = await getKnownFaces();
+        const savedFaces: KnownFaceData[] = await getKnownFaces();
 
         const labeledFaceDescriptors = await Promise.all(
-            savedFaces.map(async (face: KnownFace) => {
-                if (!face.image || !face.image.startsWith('data:image')) {
-                    console.warn('Skipping invalid face data:', face.label);
-                    return null;
-                }
-                try {
-                    const img = await faceapi.fetchImage(face.image);
-                    const detection = await faceapi.detectSingleFace(img, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceDescriptor();
-                    if (detection) {
-                        return new faceapi.LabeledFaceDescriptors(face.label, [detection.descriptor]);
+            savedFaces.map(async (face: KnownFaceData) => {
+                const descriptors: any[] = [];
+                for (const image of face.images) {
+                    if (!image || !image.startsWith('data:image')) {
+                        console.warn('Skipping invalid image data for:', face.label);
+                        continue;
                     }
-                } catch (e) {
-                    console.error("Error loading saved face:", face.label, e)
+                    try {
+                        const img = await faceapi.fetchImage(image);
+                        const detection = await faceapi.detectSingleFace(img, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceDescriptor();
+                        if (detection) {
+                            descriptors.push(detection.descriptor);
+                        }
+                    } catch (e) {
+                        console.error("Error processing image for saved face:", face.label, e)
+                    }
+                }
+
+                if (descriptors.length > 0) {
+                    return new faceapi.LabeledFaceDescriptors(face.label, descriptors);
                 }
                 return null;
             })
@@ -269,13 +276,13 @@ const FaceScanner = () => {
           <DialogHeader>
             <DialogTitle>Save New Face</DialogTitle>
             <DialogDescription>
-              A new face was detected. Enter a name to save it.
+              A new face was detected. Enter a name to save it. If the name already exists, this image will be added to their profile.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             {capturedImage && (
                 <div className="flex justify-center">
-                    <img src={capturedImage} alt="Captured face" className="rounded-md w-48 h-48 object-cover" />
+                    <img src={capturedImage} alt="Captured face" className="rounded-md w-48 h-48 object-cover transform scale-x-[-1]" />
                 </div>
             )}
             <div className="grid grid-cols-4 items-center gap-4">

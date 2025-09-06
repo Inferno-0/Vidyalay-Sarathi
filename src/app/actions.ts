@@ -8,7 +8,7 @@ const dataFilePath = path.join(process.cwd(), 'data', 'faces.json');
 
 interface KnownFace {
   label: string;
-  image: string;
+  images: string[];
 }
 
 async function ensureDataFileExists() {
@@ -31,14 +31,16 @@ export async function getKnownFaces(): Promise<KnownFace[]> {
   }
 }
 
-export async function saveKnownFace(face: KnownFace): Promise<void> {
+export async function saveKnownFace(face: { label: string; image: string }): Promise<void> {
     const faces = await getKnownFaces();
-    const existingFaceIndex = faces.findIndex(f => f.label === face.label);
-    if (existingFaceIndex > -1) {
-        faces[existingFaceIndex] = face;
+    const existingFace = faces.find(f => f.label === face.label);
+
+    if (existingFace) {
+        existingFace.images.push(face.image);
     } else {
-        faces.push(face);
+        faces.push({ label: face.label, images: [face.image] });
     }
+    
     await fs.writeFile(dataFilePath, JSON.stringify(faces, null, 2));
 }
 
