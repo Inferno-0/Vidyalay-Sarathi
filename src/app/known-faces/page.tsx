@@ -4,12 +4,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import Link from 'next/link';
-import { ArrowLeft, Trash2, Loader2, Camera } from 'lucide-react';
+import { Trash2, Loader2 } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Dialog, DialogContent, DialogHeader, DialogTitle as DialogTitleComponent, DialogFooter } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { getKnownFaces, deleteKnownFace } from '@/app/actions';
+import MainLayout from '@/components/main-layout';
 
 interface KnownFace {
   label: string;
@@ -66,33 +66,14 @@ export default function KnownFacesPage() {
   };
 
   return (
-    <main className="flex flex-col items-center min-h-screen p-4 sm:p-8 bg-background">
-      <div className="w-full max-w-4xl mx-auto">
-        <div className="flex flex-col sm:flex-row items-center justify-between mb-6 gap-4">
-            <h1 className="text-2xl sm:text-3xl font-bold">Known Faces</h1>
-            <div className="flex gap-2 w-full sm:w-auto">
-                <Button asChild variant="outline" className="flex-1">
-                    <Link href="/scanner">
-                        <Camera className="mr-2 h-4 w-4" />
-                        Scanner
-                    </Link>
-                </Button>
-                <Button asChild variant="outline" className="flex-1">
-                    <Link href="/">
-                        <ArrowLeft className="mr-2 h-4 w-4" />
-                        Home
-                    </Link>
-                </Button>
-            </div>
-        </div>
-
+    <MainLayout title="Known Faces">
         {loading ? (
           <div className="flex justify-center items-center py-10">
             <Loader2 className="h-12 w-12 animate-spin text-primary" />
             <p className="ml-4 text-lg">Loading faces...</p>
           </div>
         ) : knownFaces.length > 0 ? (
-          <div className="space-y-8">
+          <div className="space-y-8 w-full">
             {knownFaces.map((faceGroup) => (
               <div key={faceGroup.label}>
                 <h2 className="text-2xl font-semibold mb-4">{faceGroup.label}</h2>
@@ -124,7 +105,6 @@ export default function KnownFacesPage() {
             </AlertDescription>
           </Alert>
         )}
-      </div>
 
       <Dialog open={!!selectedFace} onOpenChange={() => setSelectedFace(null)}>
         <DialogContent className="sm:max-w-md">
@@ -144,6 +124,6 @@ export default function KnownFacesPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </main>
+    </MainLayout>
   );
 }
