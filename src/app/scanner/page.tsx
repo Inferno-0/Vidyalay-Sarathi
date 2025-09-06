@@ -9,17 +9,17 @@ import { ArrowLeft, Users } from 'lucide-react';
 
 export default function ScannerPage() {
   return (
-    <main className="flex flex-col items-center min-h-screen p-4 sm:p-8 bg-background">
-      <div className="w-full max-w-4xl mx-auto">
-        <div className="flex flex-col sm:flex-row items-center justify-between mb-6 gap-4">
-            <div className="flex items-center gap-4 w-full sm:w-auto">
+    <main className="flex flex-col h-screen bg-background">
+      <div className="w-full max-w-4xl mx-auto p-4 sm:p-8">
+         <div className="flex flex-col sm:flex-row items-center justify-between mb-6 gap-4">
+            <div className="flex items-center gap-4 self-start">
                 <Button asChild variant="outline">
                     <Link href="/">
                         <ArrowLeft className="mr-2 h-4 w-4" />
                         Back
                     </Link>
                 </Button>
-                <h1 className="text-2xl sm:text-3xl font-bold">Take Attendance</h1>
+                <h1 className="text-2xl sm:text-3xl font-bold whitespace-nowrap">Take Attendance</h1>
             </div>
             <Button asChild className="w-full sm:w-auto">
                 <Link href="/known-faces">
@@ -28,8 +28,10 @@ export default function ScannerPage() {
                 </Link>
             </Button>
         </div>
-        <Card className="overflow-hidden shadow-2xl">
-          <CardContent className="p-0">
+      </div>
+      <div className="flex-1 w-full max-w-4xl mx-auto px-4 sm:px-8 pb-4 sm:pb-8">
+        <Card className="overflow-hidden shadow-2xl h-full">
+          <CardContent className="p-0 h-full">
             <FaceScanner />
           </CardContent>
         </Card>
