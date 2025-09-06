@@ -17,7 +17,6 @@ const MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model/';
 interface SavedFace {
     label: string;
     image: string;
-    descriptors: number[][];
 }
 
 const FaceScanner = () => {
@@ -40,11 +39,9 @@ const FaceScanner = () => {
     }
     setLoadingMessage('Loading models...');
     await Promise.all([
-      faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL),
       faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
       faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
       faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL),
-      faceapi.nets.faceExpressionNet.loadFromUri(MODEL_URL),
     ]);
     return true;
   }, []);
@@ -67,15 +64,18 @@ const FaceScanner = () => {
     if (typeof faceapi === 'undefined') return;
     const savedFacesJson = localStorage.getItem('knownFaces');
     if (savedFacesJson) {
-      const savedFaces: SavedFace[] = JSON.parse(savedFacesJson);
-      
-      const loadedDescriptors = await Promise.all(savedFaces.map(async (face) => {
-        const descriptors = await Promise.all(
-          face.descriptors.map(d => new Float32Array(d))
+        const savedFaces: SavedFace[] = JSON.parse(savedFacesJson);
+        const labeledFaceDescriptors = await Promise.all(
+            savedFaces.map(async (face) => {
+                const img = await faceapi.fetchImage(face.image);
+                const detection = await faceapi.detectSingleFace(img, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceDescriptor();
+                if (detection) {
+                    return new faceapi.LabeledFaceDescriptors(face.label, [detection.descriptor]);
+                }
+                return null;
+            })
         );
-        return new faceapi.LabeledFaceDescriptors(face.label, descriptors);
-      }));
-      setKnownFaces(loadedDescriptors);
+        setKnownFaces(labeledFaceDescriptors.filter(d => d !== null));
     }
   }, []);
 
@@ -160,7 +160,7 @@ const FaceScanner = () => {
         }
       }
       setUnknownFaceDetected(foundUnknownFace);
-    }, 200);
+    }, 1000);
 
   }, [isDialogOpen, knownFaces]);
 
@@ -198,20 +198,17 @@ const FaceScanner = () => {
             return;
         }
         
-        const descriptorArray = Array.from(detection.descriptor);
-
         const savedFacesJson = localStorage.getItem('knownFaces');
         const savedFaces: SavedFace[] = savedFacesJson ? JSON.parse(savedFacesJson) : [];
         
         const existingFaceIndex = savedFaces.findIndex((face: SavedFace) => face.label === newFaceName);
 
         if(existingFaceIndex > -1) {
-            savedFaces[existingFaceIndex].descriptors.push(descriptorArray);
+            savedFaces[existingFaceIndex].image = capturedImage;
         } else {
             savedFaces.push({
                 label: newFaceName,
                 image: capturedImage,
-                descriptors: [descriptorArray]
             });
         }
 
