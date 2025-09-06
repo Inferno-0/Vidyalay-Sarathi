@@ -89,7 +89,7 @@ export default function KnownFacesPage() {
               <div key={faceGroup.label}>
                 <h2 className="text-2xl font-semibold mb-4">{faceGroup.label}</h2>
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                  {faceGroup.images.map((image, index) => (
+                  {Array.isArray(faceGroup.images) && faceGroup.images.map((image, index) => (
                     <Card key={`${faceGroup.label}-${index}`} className="text-center overflow-hidden cursor-pointer hover:shadow-lg transition-shadow" onClick={() => setSelectedFace(faceGroup)}>
                       <CardContent className="p-0">
                         <div className="relative w-full aspect-square">
