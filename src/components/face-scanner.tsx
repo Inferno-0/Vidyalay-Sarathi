@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { getWelcomeMessage } from '@/app/actions';
-import { Loader, UserPlus } from 'lucide-react';
+import { Loader, UserPlus, Camera } from 'lucide-react';
 
 declare const faceapi: any;
 
@@ -21,7 +21,8 @@ const FaceScanner = () => {
   const [isReady, setIsReady] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [newFaceName, setNewFaceName] = useState('');
-  const [currentDescriptor, setCurrentDescriptor] = useState<Float32Array | null>(null);
+  const [capturedImage, setCapturedImage] = useState<string | null>(null);
+  const [unknownFaceDetected, setUnknownFaceDetected] = useState(false);
   const [knownFaces, setKnownFaces] = useState<any[]>([]);
   const [recentlyWelcomed, setRecentlyWelcomed] = useState<string[]>([]);
   const { toast } = useToast();
@@ -109,7 +110,7 @@ const FaceScanner = () => {
     setIsReady(true);
     
     detectionInterval.current = setInterval(async () => {
-      if (!videoRef.current || videoRef.current.paused || videoRef.current.ended || typeof faceapi === 'undefined') {
+      if (!videoRef.current || videoRef.current.paused || videoRef.current.ended || typeof faceapi === 'undefined' || isDialogOpen) {
         return;
       }
       
@@ -128,47 +129,80 @@ const FaceScanner = () => {
       const resizedDetections = faceapi.resizeResults(detections, displaySize);
       canvas.getContext('2d')?.clearRect(0, 0, canvas.width, canvas.height);
 
-      if (knownFaces.length > 0) {
-        const faceMatcher = new faceapi.FaceMatcher(knownFaces, 0.6);
-        
-        resizedDetections.forEach((detection: any) => {
-          const { descriptor } = detection;
-          const bestMatch = faceMatcher.findBestMatch(descriptor);
-          const box = detection.detection.box;
-          const drawBox = new faceapi.draw.DrawBox(box, { 
-            label: bestMatch.toString(),
-            boxColor: bestMatch.label !== 'unknown' ? '#2ECC71' : '#E74C3C',
-          });
-          drawBox.draw(canvas);
-
-          if (bestMatch.label !== 'unknown') {
-            handleWelcome(bestMatch.label);
-          } else {
-            if (!isDialogOpen) {
-              setCurrentDescriptor(descriptor);
-            }
-          }
-        });
-      } else {
-        resizedDetections.forEach((detection: any) => {
+      let foundUnknownFace = false;
+      if (resizedDetections.length > 0) {
+        if (knownFaces.length > 0) {
+          const faceMatcher = new faceapi.FaceMatcher(knownFaces, 0.6);
+          
+          resizedDetections.forEach((detection: any) => {
+            const { descriptor } = detection;
+            const bestMatch = faceMatcher.findBestMatch(descriptor);
             const box = detection.detection.box;
             const drawBox = new faceapi.draw.DrawBox(box, { 
-              label: 'unknown',
-              boxColor: '#E74C3C'
+              label: bestMatch.toString(),
+              boxColor: bestMatch.label !== 'unknown' ? '#2ECC71' : '#E74C3C',
             });
             drawBox.draw(canvas);
-            if (!isDialogOpen) {
-              setCurrentDescriptor(detection.descriptor);
+
+            if (bestMatch.label !== 'unknown') {
+              handleWelcome(bestMatch.label);
+            } else {
+              foundUnknownFace = true;
             }
-        });
+          });
+        } else {
+          foundUnknownFace = true;
+          resizedDetections.forEach((detection: any) => {
+              const box = detection.detection.box;
+              const drawBox = new faceapi.draw.DrawBox(box, { 
+                label: 'unknown',
+                boxColor: '#E74C3C'
+              });
+              drawBox.draw(canvas);
+          });
+        }
       }
+      setUnknownFaceDetected(foundUnknownFace);
     }, 200);
 
   }, [handleWelcome, isDialogOpen, knownFaces]);
 
-  const handleSaveFace = () => {
-    if (newFaceName && currentDescriptor) {
-        const newKnownFace = new faceapi.LabeledFaceDescriptors(newFaceName, [currentDescriptor]);
+  const handleCaptureFace = () => {
+    if (videoRef.current) {
+      const video = videoRef.current;
+      const canvas = document.createElement('canvas');
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const context = canvas.getContext('2d');
+      if (context) {
+        context.translate(canvas.width, 0);
+        context.scale(-1, 1);
+        context.drawImage(video, 0, 0, canvas.width, canvas.height);
+        const dataUrl = canvas.toDataURL('image/jpeg');
+        setCapturedImage(dataUrl);
+        setIsDialogOpen(true);
+      }
+    }
+  };
+
+  const handleSaveFace = async () => {
+    if (newFaceName && capturedImage) {
+        const imageElement = await faceapi.fetchImage(capturedImage);
+        const detection = await faceapi
+          .detectSingleFace(imageElement, new faceapi.TinyFaceDetectorOptions())
+          .withFaceLandmarks()
+          .withFaceDescriptor();
+        
+        if (!detection) {
+             toast({
+                variant: 'destructive',
+                title: "Save Failed",
+                description: "Could not detect a face in the captured image. Please try again.",
+            });
+            return;
+        }
+
+        const newKnownFace = new faceapi.LabeledFaceDescriptors(newFaceName, [detection.descriptor]);
         const updatedKnownFaces = [...knownFaces, newKnownFace];
         setKnownFaces(updatedKnownFaces);
 
@@ -182,11 +216,18 @@ const FaceScanner = () => {
             title: "Face Saved!",
             description: `${newFaceName} has been added to your known faces.`,
         });
+        
         setIsDialogOpen(false);
         setNewFaceName('');
-        setCurrentDescriptor(null);
+        setCapturedImage(null);
     }
   };
+  
+  const closeDialog = () => {
+    setIsDialogOpen(false);
+    setNewFaceName('');
+    setCapturedImage(null);
+  }
 
   return (
     <div className="relative w-full aspect-video bg-card flex items-center justify-center">
@@ -202,30 +243,36 @@ const FaceScanner = () => {
         autoPlay
         muted
         playsInline
-        className={`w-full h-full object-cover transition-opacity duration-500 transform-none ${isReady ? 'opacity-100' : 'opacity-0'}`}
+        className={`w-full h-full object-cover transition-opacity duration-500 ${isReady ? 'opacity-100' : 'opacity-0'}`}
+        style={{ transform: 'scaleX(-1)' }}
       />
       <canvas ref={canvasRef} className="absolute inset-0 w-full h-full" />
 
-      {isReady && currentDescriptor && !isDialogOpen && (
+      {isReady && unknownFaceDetected && !isDialogOpen && (
          <Button 
-            onClick={() => setIsDialogOpen(true)}
+            onClick={handleCaptureFace}
             className="absolute bottom-4 right-4 z-20 animate-pulse"
             size="lg"
             >
-            <UserPlus className="mr-2 h-5 w-5" />
-            Save New Face
+            <Camera className="mr-2 h-5 w-5" />
+            Capture New Face
         </Button>
       )}
 
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+      <Dialog open={isDialogOpen} onOpenChange={closeDialog}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
             <DialogTitle>Save New Face</DialogTitle>
             <DialogDescription>
-              A new face was detected. Enter a name to save it for future recognition.
+              A new face was detected. Enter a name to save it.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
+            {capturedImage && (
+                <div className="flex justify-center">
+                    <img src={capturedImage} alt="Captured face" className="rounded-md w-48 h-48 object-cover" />
+                </div>
+            )}
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="name" className="text-right">
                 Name
@@ -240,10 +287,7 @@ const FaceScanner = () => {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => {
-                setIsDialogOpen(false);
-                setCurrentDescriptor(null);
-            }}>Cancel</Button>
+            <Button variant="outline" onClick={closeDialog}>Cancel</Button>
             <Button onClick={handleSaveFace}>Save Face</Button>
           </DialogFooter>
         </DialogContent>
