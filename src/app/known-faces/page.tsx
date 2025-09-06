@@ -5,9 +5,10 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Trash2 } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Dialog, DialogContent, DialogHeader, DialogTitle as DialogTitleComponent } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle as DialogTitleComponent, DialogFooter } from '@/components/ui/dialog';
+import { useToast } from '@/hooks/use-toast';
 
 interface KnownFace {
   label: string;
@@ -18,6 +19,7 @@ export default function KnownFacesPage() {
   const [knownFaces, setKnownFaces] = useState<KnownFace[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedFace, setSelectedFace] = useState<KnownFace | null>(null);
+  const { toast } = useToast();
 
   useEffect(() => {
     const savedFacesJson = localStorage.getItem('knownFaces');
@@ -27,6 +29,25 @@ export default function KnownFacesPage() {
     }
     setLoading(false);
   }, []);
+
+  const handleDeleteFace = () => {
+    if (!selectedFace) return;
+
+    const savedFacesJson = localStorage.getItem('knownFaces');
+    if (savedFacesJson) {
+        let savedFaces: KnownFace[] = JSON.parse(savedFacesJson);
+        const updatedFaces = savedFaces.filter(face => face.label !== selectedFace.label);
+        
+        localStorage.setItem('knownFaces', JSON.stringify(updatedFaces));
+        setKnownFaces(updatedFaces);
+
+        toast({
+            title: 'Face Deleted',
+            description: `${selectedFace.label} has been removed.`,
+        });
+    }
+    setSelectedFace(null);
+  };
 
   return (
     <main className="flex flex-col items-center min-h-screen p-4 sm:p-8 bg-background">
@@ -84,6 +105,12 @@ export default function KnownFacesPage() {
                 <img src={selectedFace.image} alt={selectedFace.label} className="rounded-md w-full h-auto object-cover" />
             </div>
           )}
+          <DialogFooter>
+            <Button variant="destructive" onClick={handleDeleteFace}>
+                <Trash2 className="mr-2 h-4 w-4" />
+                Delete
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </main>
