@@ -54,7 +54,6 @@ export default function KnownFacesPage() {
                         src={face.image} 
                         alt={face.label} 
                         className="w-full h-full object-cover"
-                        data-ai-hint="person face"
                         />
                     )}
                   </div>
