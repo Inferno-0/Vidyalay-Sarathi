@@ -7,7 +7,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { getWelcomeMessage } from '@/app/actions';
 import { Loader, Camera, Users } from 'lucide-react';
 import Link from 'next/link';
 
@@ -25,7 +24,6 @@ const FaceScanner = () => {
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [unknownFaceDetected, setUnknownFaceDetected] = useState(false);
   const [knownFaces, setKnownFaces] = useState<any[]>([]);
-  const [recentlyWelcomed, setRecentlyWelcomed] = useState<string[]>([]);
   const { toast } = useToast();
   const detectionInterval = useRef<NodeJS.Timeout>();
 
@@ -89,23 +87,6 @@ const FaceScanner = () => {
   }, [loadModels, startVideo]);
 
 
-  const handleWelcome = useCallback(async (name: string) => {
-    if (recentlyWelcomed.includes(name)) return;
-
-    setRecentlyWelcomed(prev => [...prev, name]);
-    setTimeout(() => {
-        setRecentlyWelcomed(prev => prev.filter(n => n !== name));
-    }, 30000); // 30 second cooldown
-
-    const result = await getWelcomeMessage(name);
-    if ('message' in result) {
-      toast({
-        title: `Welcome, ${name}!`,
-        description: result.message,
-      });
-    }
-  }, [recentlyWelcomed, toast]);
-
   const handlePlay = useCallback(() => {
     setLoadingMessage('');
     setIsReady(true);
@@ -145,9 +126,7 @@ const FaceScanner = () => {
             });
             drawBox.draw(canvas);
 
-            if (bestMatch.label !== 'unknown') {
-              handleWelcome(bestMatch.label);
-            } else {
+            if (bestMatch.label === 'unknown') {
               foundUnknownFace = true;
             }
           });
@@ -166,7 +145,7 @@ const FaceScanner = () => {
       setUnknownFaceDetected(foundUnknownFace);
     }, 200);
 
-  }, [handleWelcome, isDialogOpen, knownFaces]);
+  }, [isDialogOpen, knownFaces]);
 
   const handleCaptureFace = () => {
     if (videoRef.current) {
@@ -243,8 +222,9 @@ const FaceScanner = () => {
         muted
         playsInline
         className={`w-full h-full object-cover transition-opacity duration-500 ${isReady ? 'opacity-100' : 'opacity-0'}`}
+        style={{ transform: 'scaleX(-1)' }}
       />
-      <canvas ref={canvasRef} className="absolute inset-0 w-full h-full" />
+      <canvas ref={canvasRef} className="absolute inset-0 w-full h-full" style={{ transform: 'scaleX(-1)' }} />
 
        {isReady && (
         <div className="absolute top-4 right-4 z-20">
@@ -279,7 +259,7 @@ const FaceScanner = () => {
           <div className="grid gap-4 py-4">
             {capturedImage && (
                 <div className="flex justify-center">
-                    <img src={capturedImage} alt="Captured face" className="rounded-md w-48 h-48 object-cover" style={{ transform: 'scaleX(-1)' }} />
+                    <img src={capturedImage} alt="Captured face" className="rounded-md w-48 h-48 object-cover" />
                 </div>
             )}
             <div className="grid grid-cols-4 items-center gap-4">
