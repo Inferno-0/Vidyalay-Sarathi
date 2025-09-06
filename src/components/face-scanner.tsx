@@ -63,9 +63,21 @@ const FaceScanner = () => {
     if (typeof faceapi === 'undefined') return;
     const savedFacesJson = localStorage.getItem('knownFaces');
     if (savedFacesJson) {
-        const savedFaces: SavedFace[] = JSON.parse(savedFacesJson);
+        let savedFaces: SavedFace[] = [];
+        try {
+            savedFaces = JSON.parse(savedFacesJson);
+        } catch (error) {
+            console.error("Failed to parse known faces from localStorage, clearing it.", error);
+            localStorage.removeItem('knownFaces');
+            return;
+        }
+
         const labeledFaceDescriptors = await Promise.all(
             savedFaces.map(async (face) => {
+                if (!face.image || !face.image.startsWith('data:image')) {
+                    console.warn('Skipping invalid face data:', face.label);
+                    return null;
+                }
                 try {
                     const img = await faceapi.fetchImage(face.image);
                     const detection = await faceapi.detectSingleFace(img, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceDescriptor();
