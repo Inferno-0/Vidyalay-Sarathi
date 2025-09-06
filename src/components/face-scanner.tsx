@@ -191,6 +191,8 @@ const FaceScanner = () => {
       canvas.height = video.videoHeight;
       const context = canvas.getContext('2d');
       if (context) {
+        context.translate(canvas.width, 0);
+        context.scale(-1, 1);
         context.drawImage(video, 0, 0, canvas.width, canvas.height);
         const dataUrl = canvas.toDataURL('image/jpeg');
         setCapturedImage(dataUrl);
@@ -247,9 +249,9 @@ const FaceScanner = () => {
         autoPlay
         muted
         playsInline
-        className={`w-full h-full object-cover transition-opacity duration-500 ${isReady ? 'opacity-100' : 'opacity-0'}`}
+        className={`w-full h-full object-cover transition-opacity duration-500 transform scale-x-[-1] ${isReady ? 'opacity-100' : 'opacity-0'}`}
       />
-      <canvas ref={canvasRef} className="absolute inset-0 w-full h-full" />
+      <canvas ref={canvasRef} className="absolute inset-0 w-full h-full transform scale-x-[-1]" />
 
       {isReady && unknownFaceDetected && !isDialogOpen && (
          <Button 
