@@ -33,7 +33,7 @@ export default function Home() {
               <Users className="w-16 h-16 mb-4 text-accent transition-transform duration-300 group-hover:scale-110" />
               <CardTitle className="text-2xl font-bold">Known Faces</CardTitle>
               <CardDescription className="mt-2 text-muted-foreground">
-                View, add, or manage the list of recognized individuals.
+                View and manage the list of recognized individuals.
               </CardDescription>
             </CardHeader>
           </Card>

@@ -5,10 +5,11 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { ArrowLeft, Trash2 } from 'lucide-react';
+import { ArrowLeft, Trash2, Loader2 } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Dialog, DialogContent, DialogHeader, DialogTitle as DialogTitleComponent, DialogFooter } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
+import { getKnownFaces, deleteKnownFace } from '@/app/actions';
 
 interface KnownFace {
   label: string;
@@ -22,28 +23,42 @@ export default function KnownFacesPage() {
   const { toast } = useToast();
 
   useEffect(() => {
-    const savedFacesJson = localStorage.getItem('knownFaces');
-    if (savedFacesJson) {
-      const savedFaces = JSON.parse(savedFacesJson);
-      setKnownFaces(savedFaces);
+    async function loadFaces() {
+      try {
+        const faces = await getKnownFaces();
+        setKnownFaces(faces);
+      } catch (error) {
+        console.error("Failed to load faces:", error);
+        toast({
+          variant: 'destructive',
+          title: 'Error',
+          description: 'Could not load known faces.',
+        });
+      } finally {
+        setLoading(false);
+      }
     }
-    setLoading(false);
-  }, []);
+    loadFaces();
+  }, [toast]);
 
-  const handleDeleteFace = () => {
+  const handleDeleteFace = async () => {
     if (!selectedFace) return;
 
-    const savedFacesJson = localStorage.getItem('knownFaces');
-    if (savedFacesJson) {
-        let savedFaces: KnownFace[] = JSON.parse(savedFacesJson);
-        const updatedFaces = savedFaces.filter(face => face.label !== selectedFace.label);
+    try {
+        await deleteKnownFace(selectedFace.label);
         
-        localStorage.setItem('knownFaces', JSON.stringify(updatedFaces));
-        setKnownFaces(updatedFaces);
+        setKnownFaces(prevFaces => prevFaces.filter(face => face.label !== selectedFace.label));
 
         toast({
             title: 'Face Deleted',
             description: `${selectedFace.label} has been removed.`,
+        });
+    } catch (error) {
+        console.error("Failed to delete face:", error);
+        toast({
+            variant: 'destructive',
+            title: 'Error',
+            description: 'Could not delete the face. Please try again.',
         });
     }
     setSelectedFace(null);
@@ -55,19 +70,22 @@ export default function KnownFacesPage() {
         <div className="flex items-center justify-between mb-6">
             <h1 className="text-3xl font-bold">Known Faces</h1>
             <Button asChild variant="outline">
-                <Link href="/">
+                <Link href="/scanner">
                     <ArrowLeft className="mr-2 h-4 w-4" />
-                    Back to Home
+                    Back to Scanner
                 </Link>
             </Button>
         </div>
 
         {loading ? (
-          <p>Loading faces...</p>
+          <div className="flex justify-center items-center py-10">
+            <Loader2 className="h-12 w-12 animate-spin text-primary" />
+            <p className="ml-4 text-lg">Loading faces...</p>
+          </div>
         ) : knownFaces.length > 0 ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-            {knownFaces.map((face, index) => (
-              <Card key={index} className="text-center overflow-hidden cursor-pointer hover:shadow-lg transition-shadow" onClick={() => setSelectedFace(face)}>
+            {knownFaces.map((face) => (
+              <Card key={face.label} className="text-center overflow-hidden cursor-pointer hover:shadow-lg transition-shadow" onClick={() => setSelectedFace(face)}>
                 <CardContent className="p-0">
                   <div className="relative w-full aspect-square">
                     {face.image && (
@@ -106,7 +124,7 @@ export default function KnownFacesPage() {
             </div>
           )}
           <DialogFooter>
-            <Button variant="destructive" onClick={handleDeleteFace}>
+            <Button variant="destructive" onClick={handleDeleteFace} disabled={!selectedFace}>
                 <Trash2 className="mr-2 h-4 w-4" />
                 Delete
             </Button>

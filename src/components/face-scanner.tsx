@@ -8,12 +8,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Loader, Camera } from 'lucide-react';
+import { getKnownFaces, saveKnownFace } from '@/app/actions';
 
 declare const faceapi: any;
 
 const MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model/';
 
-interface SavedFace {
+interface KnownFace {
     label: string;
     image: string;
 }
@@ -51,29 +52,27 @@ const FaceScanner = () => {
       const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
-        videoRef.current.style.transform = 'scaleX(-1)';
       }
     } catch (err) {
       console.error('Error accessing camera:', err);
       setLoadingMessage('Camera access denied. Please enable camera permissions.');
+      toast({
+          variant: 'destructive',
+          title: 'Camera Error',
+          description: 'Could not access camera. Please check permissions.',
+      });
     }
-  }, []);
+  }, [toast]);
   
   const loadKnownFaces = useCallback(async () => {
     if (typeof faceapi === 'undefined') return;
-    const savedFacesJson = localStorage.getItem('knownFaces');
-    if (savedFacesJson) {
-        let savedFaces: SavedFace[] = [];
-        try {
-            savedFaces = JSON.parse(savedFacesJson);
-        } catch (error) {
-            console.error("Failed to parse known faces from localStorage, clearing it.", error);
-            localStorage.removeItem('knownFaces');
-            return;
-        }
+    
+    try {
+        setLoadingMessage('Loading known faces...');
+        const savedFaces = await getKnownFaces();
 
         const labeledFaceDescriptors = await Promise.all(
-            savedFaces.map(async (face) => {
+            savedFaces.map(async (face: KnownFace) => {
                 if (!face.image || !face.image.startsWith('data:image')) {
                     console.warn('Skipping invalid face data:', face.label);
                     return null;
@@ -91,6 +90,10 @@ const FaceScanner = () => {
             })
         );
         setKnownFaces(labeledFaceDescriptors.filter(d => d !== null));
+        setLoadingMessage('');
+    } catch (error) {
+        console.error("Failed to load known faces from server:", error);
+        setLoadingMessage('Could not load known faces.');
     }
   }, []);
 
@@ -99,7 +102,7 @@ const FaceScanner = () => {
         const modelsLoaded = await loadModels();
         if (modelsLoaded) {
             await loadKnownFaces();
-            startVideo();
+            await startVideo();
         } else {
             setTimeout(init, 1000); 
         }
@@ -109,6 +112,10 @@ const FaceScanner = () => {
     return () => {
         if (detectionInterval.current) {
             clearInterval(detectionInterval.current);
+        }
+        if (videoRef.current && videoRef.current.srcObject) {
+            const stream = videoRef.current.srcObject as MediaStream;
+            stream.getTracks().forEach(track => track.stop());
         }
     }
   }, [loadModels, startVideo, loadKnownFaces]);
@@ -129,7 +136,6 @@ const FaceScanner = () => {
 
       const displaySize = { width: video.clientWidth, height: video.clientHeight };
       faceapi.matchDimensions(canvas, displaySize);
-      canvas.getContext('2d')?.clearRect(0, 0, canvas.width, canvas.height);
 
       const detections = await faceapi
         .detectAllFaces(video, new faceapi.TinyFaceDetectorOptions())
@@ -140,8 +146,6 @@ const FaceScanner = () => {
       const ctx = canvas.getContext('2d');
       if (!ctx) return;
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.translate(canvas.width, 0);
-      ctx.scale(-1, 1);
       
       let foundUnknownFace = false;
       if (resizedDetections.length > 0) {
@@ -187,8 +191,7 @@ const FaceScanner = () => {
       canvas.height = video.videoHeight;
       const context = canvas.getContext('2d');
       if (context) {
-        context.scale(-1, 1);
-        context.drawImage(video, 0, 0, -canvas.width, canvas.height);
+        context.drawImage(video, 0, 0, canvas.width, canvas.height);
         const dataUrl = canvas.toDataURL('image/jpeg');
         setCapturedImage(dataUrl);
         setIsDialogOpen(true);
@@ -198,45 +201,29 @@ const FaceScanner = () => {
 
   const handleSaveFace = async () => {
     if (newFaceName && capturedImage) {
-        const imageElement = await faceapi.fetchImage(capturedImage);
-        const detection = await faceapi
-          .detectSingleFace(imageElement, new faceapi.TinyFaceDetectorOptions())
-          .withFaceLandmarks()
-          .withFaceDescriptor();
-        
-        if (!detection) {
-             toast({
-                variant: 'destructive',
-                title: "Save Failed",
-                description: "Could not detect a face in the captured image. Please try again.",
-            });
-            return;
-        }
-        
-        const savedFacesJson = localStorage.getItem('knownFaces');
-        const savedFaces: SavedFace[] = savedFacesJson ? JSON.parse(savedFacesJson) : [];
-        
-        const existingFaceIndex = savedFaces.findIndex((face: SavedFace) => face.label === newFaceName);
-
-        if(existingFaceIndex > -1) {
-            savedFaces[existingFaceIndex].image = capturedImage;
-        } else {
-            savedFaces.push({
+        try {
+            await saveKnownFace({
                 label: newFaceName,
                 image: capturedImage,
             });
+            
+            await loadKnownFaces();
+
+            toast({
+                title: "Face Saved!",
+                description: `${newFaceName} has been added to your known faces.`,
+            });
+            
+        } catch (error) {
+            console.error("Failed to save face:", error);
+            toast({
+                variant: "destructive",
+                title: "Save Failed",
+                description: "Could not save the face. Please try again.",
+            });
+        } finally {
+            closeDialog();
         }
-
-        localStorage.setItem('knownFaces', JSON.stringify(savedFaces));
-        
-        await loadKnownFaces();
-
-        toast({
-            title: "Face Saved!",
-            description: `${newFaceName} has been added to your known faces.`,
-        });
-        
-        closeDialog();
     }
   };
   
