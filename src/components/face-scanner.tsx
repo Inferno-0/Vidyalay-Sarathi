@@ -74,6 +74,10 @@ const FaceScanner = () => {
         const labeledFaceDescriptors = await Promise.all(
             savedFaces.map(async (face: KnownFaceData) => {
                 const descriptors: any[] = [];
+                if (!Array.isArray(face.images)) {
+                    console.warn('Skipping face with invalid images format:', face.label);
+                    return null;
+                }
                 for (const image of face.images) {
                     if (!image || !image.startsWith('data:image')) {
                         console.warn('Skipping invalid image data for:', face.label);
@@ -198,8 +202,10 @@ const FaceScanner = () => {
       canvas.height = video.videoHeight;
       const context = canvas.getContext('2d');
       if (context) {
+        // Flip the canvas horizontally
         context.translate(canvas.width, 0);
         context.scale(-1, 1);
+        // Draw the mirrored video frame onto the canvas
         context.drawImage(video, 0, 0, canvas.width, canvas.height);
         const dataUrl = canvas.toDataURL('image/jpeg');
         setCapturedImage(dataUrl);
@@ -282,7 +288,7 @@ const FaceScanner = () => {
           <div className="grid gap-4 py-4">
             {capturedImage && (
                 <div className="flex justify-center">
-                    <img src={capturedImage} alt="Captured face" className="rounded-md w-48 h-48 object-cover transform scale-x-[-1]" />
+                    <img src={capturedImage} alt="Captured face" className="rounded-md w-48 h-48 object-cover" />
                 </div>
             )}
             <div className="grid grid-cols-4 items-center gap-4">
