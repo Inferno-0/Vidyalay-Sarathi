@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { ArrowLeft, Trash2, Loader2, Camera } from 'lucide-react';
@@ -68,19 +68,19 @@ export default function KnownFacesPage() {
   return (
     <main className="flex flex-col items-center min-h-screen p-4 sm:p-8 bg-background">
       <div className="w-full max-w-4xl mx-auto">
-        <div className="flex items-center justify-between mb-6">
-            <h1 className="text-3xl font-bold">Known Faces</h1>
-            <div className="flex gap-2">
-                <Button asChild variant="outline">
+        <div className="flex flex-col sm:flex-row items-center justify-between mb-6 gap-4">
+            <h1 className="text-2xl sm:text-3xl font-bold">Known Faces</h1>
+            <div className="flex gap-2 w-full sm:w-auto">
+                <Button asChild variant="outline" className="flex-1">
                     <Link href="/scanner">
                         <Camera className="mr-2 h-4 w-4" />
-                        Back to Scanner
+                        Scanner
                     </Link>
                 </Button>
-                <Button asChild variant="outline">
+                <Button asChild variant="outline" className="flex-1">
                     <Link href="/">
                         <ArrowLeft className="mr-2 h-4 w-4" />
-                        Back to Home
+                        Home
                     </Link>
                 </Button>
             </div>

@@ -6,10 +6,10 @@ export default function Home() {
   return (
     <main className="flex flex-col items-center justify-center min-h-screen p-4 bg-background">
       <div className="text-center mb-12">
-        <h1 className="text-5xl font-extrabold tracking-tight mb-2 bg-clip-text text-transparent bg-gradient-to-r from-primary to-accent">
+        <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight mb-2 bg-clip-text text-transparent bg-gradient-to-r from-primary to-accent">
           AI Attendance Tracker
         </h1>
-        <p className="text-lg text-muted-foreground">
+        <p className="text-md md:text-lg text-muted-foreground max-w-md mx-auto">
           Streamline your attendance process with smart face recognition.
         </p>
       </div>
