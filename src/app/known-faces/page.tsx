@@ -71,9 +71,9 @@ export default function KnownFacesPage() {
         <div className="flex items-center justify-between mb-6">
             <h1 className="text-3xl font-bold">Known Faces</h1>
             <Button asChild variant="outline">
-                <Link href="/scanner">
+                <Link href="/">
                     <ArrowLeft className="mr-2 h-4 w-4" />
-                    Back to Scanner
+                    Back to Home
                 </Link>
             </Button>
         </div>

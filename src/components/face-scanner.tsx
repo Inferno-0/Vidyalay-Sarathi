@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Loader, Camera } from 'lucide-react';
+import { Loader, Camera, RefreshCw } from 'lucide-react';
 import { getKnownFaces, saveKnownFace } from '@/app/actions';
 
 declare const faceapi: any;
@@ -31,6 +31,7 @@ const FaceScanner = () => {
   const [knownFaces, setKnownFaces] = useState<any[]>([]);
   const { toast } = useToast();
   const detectionInterval = useRef<NodeJS.Timeout>();
+  const [facingMode, setFacingMode] = useState<'user' | 'environment'>('user');
 
   const loadModels = useCallback(async () => {
     if (typeof faceapi === 'undefined') {
@@ -48,8 +49,15 @@ const FaceScanner = () => {
 
   const startVideo = useCallback(async () => {
     setLoadingMessage('Accessing camera...');
+    
+    // Stop any existing stream
+    if (videoRef.current && videoRef.current.srcObject) {
+      const stream = videoRef.current.srcObject as MediaStream;
+      stream.getTracks().forEach(track => track.stop());
+    }
+
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: facingMode } });
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
       }
@@ -62,7 +70,7 @@ const FaceScanner = () => {
           description: 'Could not access camera. Please check permissions.',
       });
     }
-  }, [toast]);
+  }, [toast, facingMode]);
   
   const loadKnownFaces = useCallback(async () => {
     if (typeof faceapi === 'undefined') return;
@@ -119,23 +127,23 @@ const FaceScanner = () => {
         }
     };
     init();
-
-    return () => {
-        if (detectionInterval.current) {
-            clearInterval(detectionInterval.current);
-        }
-        if (videoRef.current && videoRef.current.srcObject) {
-            const stream = videoRef.current.srcObject as MediaStream;
-            stream.getTracks().forEach(track => track.stop());
-        }
-    }
   }, [loadModels, startVideo, loadKnownFaces]);
 
+  // Restart video when facingMode changes
+  useEffect(() => {
+      if (isReady) { // Only restart if the video was already playing
+          startVideo();
+      }
+  }, [facingMode, isReady, startVideo]);
 
   const handlePlay = useCallback(() => {
     setLoadingMessage('');
     setIsReady(true);
     
+    if (detectionInterval.current) {
+        clearInterval(detectionInterval.current);
+    }
+
     detectionInterval.current = setInterval(async () => {
       if (!videoRef.current || videoRef.current.paused || videoRef.current.ended || typeof faceapi === 'undefined' || isDialogOpen) {
         return;
@@ -202,10 +210,11 @@ const FaceScanner = () => {
       canvas.height = video.videoHeight;
       const context = canvas.getContext('2d');
       if (context) {
-        // Flip the canvas horizontally
-        context.translate(canvas.width, 0);
-        context.scale(-1, 1);
-        // Draw the mirrored video frame onto the canvas
+        // Flip the canvas horizontally only if it's the front camera
+        if (facingMode === 'user') {
+            context.translate(canvas.width, 0);
+            context.scale(-1, 1);
+        }
         context.drawImage(video, 0, 0, canvas.width, canvas.height);
         const dataUrl = canvas.toDataURL('image/jpeg');
         setCapturedImage(dataUrl);
@@ -248,6 +257,10 @@ const FaceScanner = () => {
     setCapturedImage(null);
   }
 
+  const toggleCamera = () => {
+    setFacingMode(prev => (prev === 'user' ? 'environment' : 'user'));
+  };
+
   return (
     <div className="relative w-full aspect-video bg-card flex items-center justify-center">
       {!isReady && (
@@ -262,9 +275,21 @@ const FaceScanner = () => {
         autoPlay
         muted
         playsInline
-        className={`w-full h-full object-cover transition-opacity duration-500 transform scale-x-[-1] ${isReady ? 'opacity-100' : 'opacity-0'}`}
+        className={`w-full h-full object-cover transition-opacity duration-500 ${facingMode === 'user' ? 'transform scale-x-[-1]' : ''} ${isReady ? 'opacity-100' : 'opacity-0'}`}
       />
-      <canvas ref={canvasRef} className="absolute inset-0 w-full h-full transform scale-x-[-1]" />
+      <canvas ref={canvasRef} className={`absolute inset-0 w-full h-full ${facingMode === 'user' ? 'transform scale-x-[-1]' : ''}`} />
+      
+      {isReady && (
+        <Button 
+            onClick={toggleCamera}
+            variant="outline"
+            size="icon"
+            className="absolute top-4 left-4 z-20"
+        >
+            <RefreshCw className="h-5 w-5" />
+            <span className="sr-only">Switch Camera</span>
+        </Button>
+      )}
 
       {isReady && unknownFaceDetected && !isDialogOpen && (
          <Button 
