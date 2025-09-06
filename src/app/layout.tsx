@@ -3,7 +3,7 @@ import './globals.css';
 import { Toaster } from "@/components/ui/toaster"
 
 export const metadata: Metadata = {
-  title: 'FaceBook Mini',
+  title: 'Face Scanner',
   description: 'Scan faces and keep records',
 };
 

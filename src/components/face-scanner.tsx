@@ -202,7 +202,7 @@ const FaceScanner = () => {
         autoPlay
         muted
         playsInline
-        className={`w-full h-full object-cover transition-opacity duration-500 ${isReady ? 'opacity-100' : 'opacity-0'}`}
+        className={`w-full h-full object-cover transition-opacity duration-500 transform-none ${isReady ? 'opacity-100' : 'opacity-0'}`}
       />
       <canvas ref={canvasRef} className="absolute inset-0 w-full h-full" />
 
