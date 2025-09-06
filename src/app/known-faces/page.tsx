@@ -6,7 +6,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Trash2, Loader2 } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Dialog, DialogContent, DialogHeader, DialogTitle as DialogTitleComponent, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { getKnownFaces, deleteKnownFace } from '@/app/actions';
 import MainLayout from '@/components/main-layout';
@@ -109,7 +109,7 @@ export default function KnownFacesPage() {
       <Dialog open={!!selectedFace} onOpenChange={() => setSelectedFace(null)}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            {selectedFace && <DialogTitleComponent className="text-2xl">{selectedFace.label}</DialogTitleComponent>}
+             <DialogTitle className="text-2xl">{selectedFace?.label}</DialogTitle>
           </DialogHeader>
           {selectedFace && (
             <div className="flex justify-center p-4">
