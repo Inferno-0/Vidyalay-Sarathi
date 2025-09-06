@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import Image from 'next/image';
+import { Dialog, DialogContent, DialogHeader, DialogTitle as DialogTitleComponent } from '@/components/ui/dialog';
 
 interface KnownFace {
   label: string;
@@ -17,6 +17,7 @@ interface KnownFace {
 export default function KnownFacesPage() {
   const [knownFaces, setKnownFaces] = useState<KnownFace[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedFace, setSelectedFace] = useState<KnownFace | null>(null);
 
   useEffect(() => {
     const savedFacesJson = localStorage.getItem('knownFaces');
@@ -45,15 +46,14 @@ export default function KnownFacesPage() {
         ) : knownFaces.length > 0 ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
             {knownFaces.map((face, index) => (
-              <Card key={index} className="text-center overflow-hidden">
+              <Card key={index} className="text-center overflow-hidden cursor-pointer hover:shadow-lg transition-shadow" onClick={() => setSelectedFace(face)}>
                 <CardContent className="p-0">
                   <div className="relative w-full aspect-square">
                     {face.image && (
-                     <Image 
+                     <img 
                         src={face.image} 
                         alt={face.label} 
-                        layout="fill"
-                        objectFit="cover"
+                        className="w-full h-full object-cover"
                         data-ai-hint="person face"
                         />
                     )}
@@ -74,6 +74,21 @@ export default function KnownFacesPage() {
           </Alert>
         )}
       </div>
+
+      <Dialog open={!!selectedFace} onOpenChange={() => setSelectedFace(null)}>
+        <DialogContent className="sm:max-w-md">
+            {selectedFace && (
+                <>
+                    <DialogHeader>
+                        <DialogTitleComponent className="text-2xl">{selectedFace.label}</DialogTitleComponent>
+                    </DialogHeader>
+                    <div className="flex justify-center p-4">
+                        <img src={selectedFace.image} alt={selectedFace.label} className="rounded-md w-full h-auto object-cover" />
+                    </div>
+                </>
+            )}
+        </DialogContent>
+      </Dialog>
     </main>
   );
 }
