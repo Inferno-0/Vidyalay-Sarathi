@@ -54,6 +54,7 @@ const FaceScanner = () => {
     if (videoRef.current && videoRef.current.srcObject) {
       const stream = videoRef.current.srcObject as MediaStream;
       stream.getTracks().forEach(track => track.stop());
+      videoRef.current.srcObject = null;
     }
 
     try {
@@ -98,7 +99,7 @@ const FaceScanner = () => {
                             descriptors.push(detection.descriptor);
                         }
                     } catch (e) {
-                        console.error("Error processing image for saved face:", face.label, e)
+                        console.error("Error loading saved face:", face.label, e)
                     }
                 }
 
@@ -127,7 +128,17 @@ const FaceScanner = () => {
         }
     };
     init();
-  }, [loadModels, startVideo, loadKnownFaces]);
+
+    return () => {
+      if (detectionInterval.current) {
+          clearInterval(detectionInterval.current);
+      }
+      if (videoRef.current && videoRef.current.srcObject) {
+        const stream = videoRef.current.srcObject as MediaStream;
+        stream.getTracks().forEach(track => track.stop());
+      }
+    }
+  }, []);
 
   // Restart video when facingMode changes
   useEffect(() => {
@@ -186,6 +197,7 @@ const FaceScanner = () => {
             }
           });
         } else {
+          // If there are no known faces, any detected face is unknown
           foundUnknownFace = true;
           resizedDetections.forEach((detection: any) => {
               const box = detection.detection.box;
