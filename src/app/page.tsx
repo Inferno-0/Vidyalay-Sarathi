@@ -1,3 +1,4 @@
+
 import FaceScanner from '@/components/face-scanner';
 import { Card, CardContent } from '@/components/ui/card';
 

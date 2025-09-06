@@ -8,7 +8,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { getWelcomeMessage } from '@/app/actions';
-import { Loader, UserPlus, Camera } from 'lucide-react';
+import { Loader, Camera, Users } from 'lucide-react';
+import Link from 'next/link';
 
 declare const faceapi: any;
 
@@ -175,8 +176,6 @@ const FaceScanner = () => {
       canvas.height = video.videoHeight;
       const context = canvas.getContext('2d');
       if (context) {
-        context.translate(canvas.width, 0);
-        context.scale(-1, 1);
         context.drawImage(video, 0, 0, canvas.width, canvas.height);
         const dataUrl = canvas.toDataURL('image/jpeg');
         setCapturedImage(dataUrl);
@@ -244,9 +243,19 @@ const FaceScanner = () => {
         muted
         playsInline
         className={`w-full h-full object-cover transition-opacity duration-500 ${isReady ? 'opacity-100' : 'opacity-0'}`}
-        style={{ transform: 'scaleX(-1)' }}
       />
       <canvas ref={canvasRef} className="absolute inset-0 w-full h-full" />
+
+       {isReady && (
+        <div className="absolute top-4 right-4 z-20">
+            <Button asChild>
+                <Link href="/known-faces">
+                    <Users className="mr-2 h-5 w-5" />
+                    Known Faces
+                </Link>
+            </Button>
+        </div>
+       )}
 
       {isReady && unknownFaceDetected && !isDialogOpen && (
          <Button 
@@ -270,7 +279,7 @@ const FaceScanner = () => {
           <div className="grid gap-4 py-4">
             {capturedImage && (
                 <div className="flex justify-center">
-                    <img src={capturedImage} alt="Captured face" className="rounded-md w-48 h-48 object-cover" />
+                    <img src={capturedImage} alt="Captured face" className="rounded-md w-48 h-48 object-cover" style={{ transform: 'scaleX(-1)' }} />
                 </div>
             )}
             <div className="grid grid-cols-4 items-center gap-4">
