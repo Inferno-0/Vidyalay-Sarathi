@@ -64,35 +64,6 @@ const FaceScanner: React.FC<FaceScannerProps> = ({ mode = 'enrollment', onFaceRe
     }
   }, []);
 
-  const startVideo = useCallback(async (mode: 'user' | 'environment') => {
-    if (videoRef.current && videoRef.current.srcObject) {
-        const stream = videoRef.current.srcObject as MediaStream;
-        stream.getTracks().forEach(track => track.stop());
-    }
-    
-    try {
-        setLoadingMessage('Accessing camera...');
-        const stream = await navigator.mediaDevices.getUserMedia({ 
-            video: { 
-                facingMode: mode 
-            } 
-        });
-        if (videoRef.current) {
-            videoRef.current.srcObject = stream;
-            setHasCameraPermission(true);
-        }
-    } catch (err) {
-        console.error('Error accessing camera:', err);
-        setLoadingMessage(`Camera access denied. Please enable permissions.`);
-        setHasCameraPermission(false);
-        toast({
-            variant: 'destructive',
-            title: 'Camera Access Denied',
-            description: 'Could not access the camera. Please check your browser permissions.',
-        });
-    }
-  }, [toast]);
-  
   const loadKnownFaces = useCallback(async () => {
     if (typeof faceapi === 'undefined') return;
     
@@ -138,25 +109,59 @@ const FaceScanner: React.FC<FaceScannerProps> = ({ mode = 'enrollment', onFaceRe
   }, []);
 
   useEffect(() => {
-    const init = async () => {
-        const modelsLoaded = await loadModels();
-        if (modelsLoaded) {
-            await loadKnownFaces();
-            await startVideo(facingMode);
-        }
-    };
-    init();
-
-    return () => {
-      if (detectionInterval.current) {
-          clearInterval(detectionInterval.current);
-      }
+      const init = async () => {
+          const modelsLoaded = await loadModels();
+          if (modelsLoaded) {
+              await loadKnownFaces();
+          }
+      };
+      init();
+  }, [loadModels, loadKnownFaces]);
+  
+  useEffect(() => {
+    let stream: MediaStream | null = null;
+  
+    const startVideo = async () => {
+      // Stop any existing stream
       if (videoRef.current && videoRef.current.srcObject) {
-        const stream = videoRef.current.srcObject as MediaStream;
+        (videoRef.current.srcObject as MediaStream).getTracks().forEach(track => track.stop());
+      }
+      
+      try {
+        setLoadingMessage('Accessing camera...');
+        setIsReady(false);
+        stream = await navigator.mediaDevices.getUserMedia({ 
+          video: { 
+            facingMode: facingMode 
+          } 
+        });
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          setHasCameraPermission(true);
+        }
+      } catch (err) {
+        console.error('Error accessing camera:', err);
+        setLoadingMessage(`Camera access denied. Please enable permissions.`);
+        setHasCameraPermission(false);
+        toast({
+          variant: 'destructive',
+          title: 'Camera Access Denied',
+          description: 'Could not access the camera. Please check your browser permissions.',
+        });
+      }
+    };
+  
+    startVideo();
+  
+    return () => {
+      if (stream) {
         stream.getTracks().forEach(track => track.stop());
       }
+      if (detectionInterval.current) {
+        clearInterval(detectionInterval.current);
+      }
     }
-  }, []);
+  }, [facingMode, toast]);
 
   const handlePlay = useCallback(() => {
     setLoadingMessage('');
@@ -282,12 +287,8 @@ const FaceScanner: React.FC<FaceScannerProps> = ({ mode = 'enrollment', onFaceRe
   }
 
   const toggleCamera = useCallback(() => {
-    const newMode = facingMode === 'user' ? 'environment' : 'user';
-    setFacingMode(newMode);
-    setIsReady(false);
-    setLoadingMessage('Switching camera...');
-    startVideo(newMode);
-  }, [facingMode, startVideo]);
+    setFacingMode(prevMode => prevMode === 'user' ? 'environment' : 'user');
+  }, []);
 
   return (
     <div className="relative w-full h-full bg-card flex items-center justify-center">
