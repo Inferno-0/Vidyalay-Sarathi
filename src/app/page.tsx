@@ -5,76 +5,76 @@ import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/ca
 import { CalendarCheck, UserPlus, BookUser, Smile } from 'lucide-react';
 
 const TopLeftRibbon = () => (
-    <svg width="200" height="200" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg" className="absolute top-0 left-0 z-0 opacity-50">
-        <path d="M-50 50C-50 50 50 -50 150 50S250 150 150 150S-50 50 -50 50Z" fill="#FFE9D6"/>
+    <svg width="200" height="200" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg" className="absolute top-0 left-0 z-0 opacity-70">
+        <path d="M-50 50C-50 50 50 -50 150 50S250 150 150 150S-50 50 -50 50Z" fill="#FFDAB9"/>
     </svg>
 );
 
 const BottomRightBubbles = () => (
-    <svg width="200" height="200" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg" className="absolute bottom-0 right-0 z-0 opacity-50">
-        <circle cx="150" cy="150" r="50" fill="#E8F9F2"/>
-        <circle cx="175" cy="125" r="25" fill="#E8F9F2"/>
+    <svg width="200" height="200" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg" className="absolute bottom-0 right-0 z-0 opacity-70">
+        <circle cx="150" cy="150" r="50" fill="#D4F1E6"/>
+        <circle cx="175" cy="125" r="25" fill="#D4F1E6"/>
     </svg>
 );
 
 const TopRightBubbles = () => (
-    <svg width="150" height="150" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg" className="absolute top-[-2rem] right-[-2rem] z-0 opacity-40">
-        <circle cx="100" cy="50" r="80" fill="#D6EAF8" />
-        <circle cx="150" cy="100" r="30" fill="#D6EAF8" />
+    <svg width="150" height="150" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg" className="absolute top-[-2rem] right-[-2rem] z-0 opacity-60">
+        <circle cx="100" cy="50" r="80" fill="#CDE1F0" />
+        <circle cx="150" cy="100" r="30" fill="#CDE1F0" />
     </svg>
 );
 
 const BottomLeftRibbon = () => (
-    <svg width="250" height="250" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg" className="absolute bottom-[-3rem] left-[-3rem] z-0 opacity-30 transform -scale-x-100">
-        <path d="M-50 50C-50 50 50 -50 150 50S250 150 150 150S-50 50 -50 50Z" fill="#FADBD8" />
+    <svg width="250" height="250" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg" className="absolute bottom-[-3rem] left-[-3rem] z-0 opacity-50 transform -scale-x-100">
+        <path d="M-50 50C-50 50 50 -50 150 50S250 150 150 150S-50 50 -50 50Z" fill="#F5C7C3" />
     </svg>
 );
 
 const MidLeftDots = () => (
-    <svg width="100" height="100" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" className="absolute top-1/2 left-[-1rem] -translate-y-1/2 z-0 opacity-20">
-        <circle cx="20" cy="20" r="5" fill="#FADBD8"/>
-        <circle cx="40" cy="50" r="8" fill="#D6EAF8"/>
-        <circle cx="15" cy="75" r="4" fill="#FFE9D6"/>
+    <svg width="100" height="100" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" className="absolute top-1/2 left-[-1rem] -translate-y-1/2 z-0 opacity-40">
+        <circle cx="20" cy="20" r="5" fill="#F5C7C3"/>
+        <circle cx="40" cy="50" r="8" fill="#CDE1F0"/>
+        <circle cx="15" cy="75" r="4" fill="#FFDAB9"/>
     </svg>
 );
 
 const MidRightBubbles = () => (
-    <svg width="120" height="120" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg" className="absolute top-1/3 right-[-2rem] z-0 opacity-30">
-        <circle cx="80" cy="40" r="40" fill="#E8F9F2"/>
-        <circle cx="100" cy="80" r="20" fill="#E8F9F2"/>
+    <svg width="120" height="120" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg" className="absolute top-1/3 right-[-2rem] z-0 opacity-50">
+        <circle cx="80" cy="40" r="40" fill="#D4F1E6"/>
+        <circle cx="100" cy="80" r="20" fill="#D4F1E6"/>
     </svg>
 );
 
 const TopCenterDots = () => (
-    <svg width="150" height="50" viewBox="0 0 150 50" fill="none" xmlns="http://www.w3.org/2000/svg" className="absolute top-20 left-1/2 -translate-x-1/2 z-0 opacity-25">
-        <circle cx="10" cy="25" r="4" fill="#D6EAF8"/>
-        <circle cx="75" cy="15" r="6" fill="#FADBD8"/>
-        <circle cx="140" cy="35" r="5" fill="#FFE9D6"/>
+    <svg width="150" height="50" viewBox="0 0 150 50" fill="none" xmlns="http://www.w3.org/2000/svg" className="absolute top-20 left-1/2 -translate-x-1/2 z-0 opacity-45">
+        <circle cx="10" cy="25" r="4" fill="#CDE1F0"/>
+        <circle cx="75" cy="15" r="6" fill="#F5C7C3"/>
+        <circle cx="140" cy="35" r="5" fill="#FFDAB9"/>
     </svg>
 );
 
 const BottomCenterRibbon = () => (
-    <svg width="300" height="100" viewBox="0 0 300 100" fill="none" xmlns="http://www.w3.org/2000/svg" className="absolute bottom-10 left-1/2 -translate-x-1/2 z-0 opacity-20">
-        <path d="M0 50 Q 75 -20, 150 50 T 300 50" stroke="#FFE9D6" strokeWidth="10" fill="none" />
+    <svg width="300" height="100" viewBox="0 0 300 100" fill="none" xmlns="http://www.w3.org/2000/svg" className="absolute bottom-10 left-1/2 -translate-x-1/2 z-0 opacity-40">
+        <path d="M0 50 Q 75 -20, 150 50 T 300 50" stroke="#FFDAB9" strokeWidth="10" fill="none" />
     </svg>
 );
 
 const CenterLeftShape = () => (
-    <svg width="80" height="80" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg" className="absolute top-1/2 left-1/4 -translate-y-1/2 z-0 opacity-15">
-        <rect x="10" y="10" width="60" height="60" rx="30" fill="#D6EAF8"/>
+    <svg width="80" height="80" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg" className="absolute top-1/2 left-1/4 -translate-y-1/2 z-0 opacity-35">
+        <rect x="10" y="10" width="60" height="60" rx="30" fill="#CDE1F0"/>
     </svg>
 );
 
 const CenterRightShape = () => (
-    <svg width="70" height="70" viewBox="0 0 70 70" fill="none" xmlns="http://www.w3.org/2000/svg" className="absolute top-1/2 right-1/4 -translate-y-1/2 z-0 opacity-15">
-        <path d="M35 0 L60 25 L35 70 L10 25 Z" fill="#FADBD8" />
+    <svg width="70" height="70" viewBox="0 0 70 70" fill="none" xmlns="http://www.w3.org/2000/svg" className="absolute top-1/2 right-1/4 -translate-y-1/2 z-0 opacity-35">
+        <path d="M35 0 L60 25 L35 70 L10 25 Z" fill="#F5C7C3" />
     </svg>
 );
 
 const TopFarRightDots = () => (
-    <svg width="50" height="50" viewBox="0 0 50 50" fill="none" xmlns="http://www.w3.org/2000/svg" className="absolute top-10 right-10 z-0 opacity-30">
-        <circle cx="25" cy="25" r="3" fill="#E8F9F2"/>
-        <circle cx="40" cy="10" r="2" fill="#E8F9F2"/>
+    <svg width="50" height="50" viewBox="0 0 50 50" fill="none" xmlns="http://www.w3.org/2000/svg" className="absolute top-10 right-10 z-0 opacity-50">
+        <circle cx="25" cy="25" r="3" fill="#D4F1E6"/>
+        <circle cx="40" cy="10" r="2" fill="#D4F1E6"/>
     </svg>
 );
 
