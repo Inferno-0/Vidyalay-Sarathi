@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { getKnownFaces, getAttendanceForStudent, takeAttendance } from '@/app/actions';
@@ -23,25 +23,26 @@ export default function AttendancePage() {
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
+  const [markedPresentToday, setMarkedPresentToday] = useState(new Set<string>());
 
-  const markedPresentToday = useRef(new Set<string>());
-  
   const fetchStudentsAndAttendance = useCallback(async () => {
     setLoading(true);
     try {
       const knownFacesData = await getKnownFaces();
       const formattedDate = format(date, 'yyyy-MM-dd');
       
+      const newMarkedPresent = new Set<string>();
       const studentsWithAttendance = await Promise.all(
         knownFacesData.map(async (face) => {
           const status = await getAttendanceForStudent(face.label, formattedDate);
           if (status === 'Present') {
-              markedPresentToday.current.add(face.label);
+            newMarkedPresent.add(face.label);
           }
           return { ...face, status };
         })
       );
       setStudents(studentsWithAttendance);
+      setMarkedPresentToday(newMarkedPresent);
     } catch (error) {
       console.error("Failed to load students:", error);
     } finally {
@@ -53,12 +54,15 @@ export default function AttendancePage() {
     const formattedDate = format(date, 'yyyy-MM-dd');
     try {
       await takeAttendance(studentId, formattedDate, status);
-      // Create a new set to trigger re-render
+      
       if (status === 'Present') {
-        markedPresentToday.current.add(studentId);
+        setMarkedPresentToday(prev => new Set(prev).add(studentId));
       } else {
-        // Optionally handle removing from present if marked otherwise
-        markedPresentToday.current.delete(studentId);
+        setMarkedPresentToday(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(studentId);
+          return newSet;
+        });
       }
       setStudents(prev => prev.map(s => s.label === studentId ? { ...s, status } : s));
     } catch (error) {
@@ -81,9 +85,8 @@ export default function AttendancePage() {
     }
   };
   
-  // Callback for when a face is recognized by the scanner
   const onFaceRecognized = (name: string) => {
-    if (!markedPresentToday.current.has(name)) {
+    if (!markedPresentToday.has(name)) {
       handleMarkAttendance(name, 'Present');
       toast({
         title: 'Attendance Marked',
@@ -101,7 +104,7 @@ export default function AttendancePage() {
                <FaceScanner 
                   onFaceRecognized={onFaceRecognized} 
                   mode="attendance"
-                  recognizedLabels={new Set(Array.from(markedPresentToday.current))}
+                  recognizedLabels={markedPresentToday}
                 />
             </CardContent>
           </Card>

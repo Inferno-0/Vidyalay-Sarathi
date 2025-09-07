@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Loader, Camera, SwitchCamera, CheckCircle } from 'lucide-react';
+import { Loader, Camera, SwitchCamera, UserCheck } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { getKnownFaces, saveKnownFace } from '@/app/actions';
 import { Progress } from '@/components/ui/progress';
@@ -49,6 +49,7 @@ const FaceScanner: React.FC<FaceScannerProps> = ({ mode = 'enrollment', onFaceRe
   const [capturedImages, setCapturedImages] = useState<string[]>([]);
   const [enrollmentStep, setEnrollmentStep] = useState(0);
   const [faceMatcher, setFaceMatcher] = useState<any>(null);
+  const [alreadyEnrolledMessage, setAlreadyEnrolledMessage] = useState<string | null>(null);
   const { toast } = useToast();
   const detectionInterval = useRef<NodeJS.Timeout>();
   const [facingMode, setFacingMode] = useState<'user' | 'environment'>('user');
@@ -90,23 +91,16 @@ const FaceScanner: React.FC<FaceScannerProps> = ({ mode = 'enrollment', onFaceRe
         const labeledFaceDescriptors = await Promise.all(
             savedFaces.map(async (face: KnownFaceData) => {
                 const descriptors: Float32Array[] = [];
-                if (!Array.isArray(face.images)) {
-                    console.warn('Skipping face with invalid images format:', face.label);
-                    return null;
-                }
+                if (!Array.isArray(face.images)) return null;
+                
                 for (const image of face.images) {
-                    if (!image || !image.startsWith('data:image')) {
-                        console.warn('Skipping invalid image data for:', face.label);
-                        continue;
-                    }
+                    if (!image || !image.startsWith('data:image')) continue;
                     try {
                         const img = await faceapi.fetchImage(image);
                         const detection = await faceapi.detectSingleFace(img).withFaceLandmarks().withFaceDescriptor();
-                        if (detection) {
-                            descriptors.push(detection.descriptor);
-                        }
+                        if (detection) descriptors.push(detection.descriptor);
                     } catch (e) {
-                        console.error("Error loading saved face:", face.label, e)
+                        console.error("Error loading saved face:", face.label, e);
                     }
                 }
 
@@ -141,9 +135,7 @@ const FaceScanner: React.FC<FaceScannerProps> = ({ mode = 'enrollment', onFaceRe
       setLoadingMessage('Accessing camera...');
       setIsReady(false);
       const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: { 
-          facingMode: facingMode 
-        } 
+        video: { facingMode } 
       });
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
@@ -189,14 +181,12 @@ const FaceScanner: React.FC<FaceScannerProps> = ({ mode = 'enrollment', onFaceRe
     setLoadingMessage('');
     setIsReady(true);
     
-    if (detectionInterval.current) {
-        clearInterval(detectionInterval.current);
-    }
+    if (detectionInterval.current) clearInterval(detectionInterval.current);
     
     const detectionOptions = new faceapi.SsdMobilenetv1Options({ minConfidence: 0.5 });
 
     detectionInterval.current = setInterval(async () => {
-      if (!videoRef.current || videoRef.current.paused || videoRef.current.ended || typeof faceapi === 'undefined' || isDialogOpen) {
+      if (!videoRef.current || videoRef.current.paused || videoRef.current.ended || typeof faceapi === 'undefined' || (isDialogOpen && mode === 'enrollment')) {
         return;
       }
       
@@ -207,7 +197,7 @@ const FaceScanner: React.FC<FaceScannerProps> = ({ mode = 'enrollment', onFaceRe
       const displaySize = { width: video.clientWidth, height: video.clientHeight };
       faceapi.matchDimensions(canvas, displaySize);
 
-      const detections = await faceapi
+      const detection = await faceapi
         .detectSingleFace(video, detectionOptions)
         .withFaceLandmarks()
         .withFaceDescriptor();
@@ -216,49 +206,47 @@ const FaceScanner: React.FC<FaceScannerProps> = ({ mode = 'enrollment', onFaceRe
       if (!ctx) return;
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       
-      if (detections) {
-        const resizedDetections = faceapi.resizeResults(detections, displaySize);
-        if (faceMatcher && mode === 'attendance') {
+      if (detection) {
+        const resizedDetections = faceapi.resizeResults(detection, displaySize);
+        
+        if (faceMatcher) {
             const bestMatch = faceMatcher.findBestMatch(resizedDetections.descriptor);
             const box = resizedDetections.detection.box;
             
-            const isAlreadyRecognized = recognizedLabels.has(bestMatch.label);
-
             if (bestMatch.label !== 'unknown') {
-                if (isAlreadyRecognized) {
-                    // Draw a persistent green overlay for already marked students
-                    ctx.fillStyle = 'rgba(46, 204, 113, 0.4)';
-                    ctx.fillRect(box.x, box.y, box.width, box.height);
-                    ctx.font = '24px Arial';
-                    ctx.fillStyle = 'white';
-                    ctx.fillText('✅', box.x + box.width - 30, box.y + 30);
-                    const drawBox = new faceapi.draw.DrawBox(box, { 
-                      label: `${bestMatch.label} (Present)`,
-                      boxColor: '#2ECC71',
-                    });
+                const isAlreadyProcessed = recognizedLabels.has(bestMatch.label);
+                
+                if (mode === 'attendance') {
+                    const label = isAlreadyProcessed ? `${bestMatch.label} (Present)` : bestMatch.toString();
+                    const boxColor = isAlreadyProcessed ? '#2ECC71' : '#3498DB';
+                    const drawBox = new faceapi.draw.DrawBox(box, { label, boxColor });
                     drawBox.draw(canvas);
-                } else {
-                    // Draw standard box and trigger recognition
-                    const drawBox = new faceapi.draw.DrawBox(box, { 
-                      label: bestMatch.toString(),
-                      boxColor: '#2ECC71',
-                    });
-                    drawBox.draw(canvas);
-                    if (onFaceRecognized) {
-                      onFaceRecognized(bestMatch.label);
+
+                    if (isAlreadyProcessed) {
+                        ctx.fillStyle = 'rgba(46, 204, 113, 0.4)';
+                        ctx.fillRect(box.x, box.y, box.width, box.height);
                     }
+
+                    if (!isAlreadyProcessed && onFaceRecognized) {
+                        onFaceRecognized(bestMatch.label);
+                    }
+                } else if (mode === 'enrollment') {
+                    setAlreadyEnrolledMessage(`${bestMatch.label} is already enrolled.`);
+                    const drawBox = new faceapi.draw.DrawBox(box, { label: bestMatch.label, boxColor: '#2ECC71' });
+                    drawBox.draw(canvas);
                 }
+
             } else {
-                 // Draw box for "unknown"
-                const drawBox = new faceapi.draw.DrawBox(box, { 
-                    label: 'Unknown',
-                    boxColor: '#E74C3C',
-                });
+                 setAlreadyEnrolledMessage(null);
+                const drawBox = new faceapi.draw.DrawBox(box, { label: 'Unknown', boxColor: '#E74C3C' });
                 drawBox.draw(canvas);
             }
         } else {
+            setAlreadyEnrolledMessage(null);
             faceapi.draw.drawDetections(canvas, resizedDetections);
         }
+      } else {
+        setAlreadyEnrolledMessage(null);
       }
     }, 1500);
 
@@ -335,13 +323,23 @@ const FaceScanner: React.FC<FaceScannerProps> = ({ mode = 'enrollment', onFaceRe
 
   const renderEnrollmentControls = () => (
     <div className="bg-muted/50 p-4 rounded-lg shadow-lg text-center backdrop-blur-sm">
-        <p className="text-lg font-semibold mb-2">Step {enrollmentStep + 1} of {enrollmentSteps.length}</p>
-        <p className="text-muted-foreground mb-4">{enrollmentSteps[enrollmentStep]}</p>
-        <Progress value={progress} className="w-full mb-4" />
-        <Button onClick={handleCaptureFace} size="lg" className="w-full">
-            <Camera className="mr-2 h-5 w-5" />
-            Capture Pose
-        </Button>
+        {alreadyEnrolledMessage ? (
+             <Alert variant="destructive" className="mb-4">
+                <UserCheck className="h-4 w-4"/>
+                <AlertTitle>Face Already Registered</AlertTitle>
+                <AlertDescription>{alreadyEnrolledMessage}</AlertDescription>
+             </Alert>
+        ) : (
+          <>
+            <p className="text-lg font-semibold mb-2">Step {enrollmentStep + 1} of {enrollmentSteps.length}</p>
+            <p className="text-muted-foreground mb-4">{enrollmentSteps[enrollmentStep]}</p>
+            <Progress value={progress} className="w-full mb-4" />
+            <Button onClick={handleCaptureFace} size="lg" className="w-full" disabled={!!alreadyEnrolledMessage}>
+                <Camera className="mr-2 h-5 w-5" />
+                Capture Pose
+            </Button>
+          </>
+        )}
     </div>
   );
 
