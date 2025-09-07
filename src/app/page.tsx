@@ -30,6 +30,54 @@ const BottomLeftRibbon = () => (
     </svg>
 );
 
+const MidLeftDots = () => (
+    <svg width="100" height="100" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" className="absolute top-1/2 left-[-1rem] -translate-y-1/2 z-0 opacity-20">
+        <circle cx="20" cy="20" r="5" fill="#FADBD8"/>
+        <circle cx="40" cy="50" r="8" fill="#D6EAF8"/>
+        <circle cx="15" cy="75" r="4" fill="#FFE9D6"/>
+    </svg>
+);
+
+const MidRightBubbles = () => (
+    <svg width="120" height="120" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg" className="absolute top-1/3 right-[-2rem] z-0 opacity-30">
+        <circle cx="80" cy="40" r="40" fill="#E8F9F2"/>
+        <circle cx="100" cy="80" r="20" fill="#E8F9F2"/>
+    </svg>
+);
+
+const TopCenterDots = () => (
+    <svg width="150" height="50" viewBox="0 0 150 50" fill="none" xmlns="http://www.w3.org/2000/svg" className="absolute top-20 left-1/2 -translate-x-1/2 z-0 opacity-25">
+        <circle cx="10" cy="25" r="4" fill="#D6EAF8"/>
+        <circle cx="75" cy="15" r="6" fill="#FADBD8"/>
+        <circle cx="140" cy="35" r="5" fill="#FFE9D6"/>
+    </svg>
+);
+
+const BottomCenterRibbon = () => (
+    <svg width="300" height="100" viewBox="0 0 300 100" fill="none" xmlns="http://www.w3.org/2000/svg" className="absolute bottom-10 left-1/2 -translate-x-1/2 z-0 opacity-20">
+        <path d="M0 50 Q 75 -20, 150 50 T 300 50" stroke="#FFE9D6" strokeWidth="10" fill="none" />
+    </svg>
+);
+
+const CenterLeftShape = () => (
+    <svg width="80" height="80" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg" className="absolute top-1/2 left-1/4 -translate-y-1/2 z-0 opacity-15">
+        <rect x="10" y="10" width="60" height="60" rx="30" fill="#D6EAF8"/>
+    </svg>
+);
+
+const CenterRightShape = () => (
+    <svg width="70" height="70" viewBox="0 0 70 70" fill="none" xmlns="http://www.w3.org/2000/svg" className="absolute top-1/2 right-1/4 -translate-y-1/2 z-0 opacity-15">
+        <path d="M35 0 L60 25 L35 70 L10 25 Z" fill="#FADBD8" />
+    </svg>
+);
+
+const TopFarRightDots = () => (
+    <svg width="50" height="50" viewBox="0 0 50 50" fill="none" xmlns="http://www.w3.org/2000/svg" className="absolute top-10 right-10 z-0 opacity-30">
+        <circle cx="25" cy="25" r="3" fill="#E8F9F2"/>
+        <circle cx="40" cy="10" r="2" fill="#E8F9F2"/>
+    </svg>
+);
+
 
 export default function Home() {
   return (
@@ -38,6 +86,13 @@ export default function Home() {
         <BottomRightBubbles />
         <TopRightBubbles />
         <BottomLeftRibbon />
+        <MidLeftDots />
+        <MidRightBubbles />
+        <TopCenterDots />
+        <BottomCenterRibbon />
+        <CenterLeftShape />
+        <CenterRightShape />
+        <TopFarRightDots />
 
         <div className="relative z-10 w-full max-w-4xl p-8">
             <div className="mb-12 text-center">
