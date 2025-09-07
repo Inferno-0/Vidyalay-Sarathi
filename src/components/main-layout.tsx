@@ -57,12 +57,13 @@ export default function MainLayout({ children, title }: MainLayoutProps) {
           </Sheet>
           
           <div className="flex-1">
-            <h1 className="text-xl font-bold">{title}</h1>
+            <Link href="/" className="md:hidden text-xl font-bold">{title}</Link>
+             <h1 className="hidden md:block text-3xl font-bold">{title}</h1>
           </div>
         </div>
       </header>
       <main className="flex-1 flex flex-col items-center p-4 sm:p-8">
-        <div className="flex-1 w-full max-w-4xl mx-auto flex flex-col items-center">
+        <div className="flex-1 w-full max-w-4xl mx-auto flex flex-col">
           <h1 className="hidden md:block text-3xl font-bold mb-6 self-start">{title}</h1>
           {children}
         </div>
