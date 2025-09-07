@@ -643,7 +643,8 @@ const SidebarMenuBadge = React.forwardRef<
   HTMLDivElement,
   React.ComponentProps<"div">
 >(({ className, ...props }, ref) => {
-  <div
+  return (
+    <div
     ref={ref}
     data-sidebar="menu-badge"
     className={cn(
@@ -657,6 +658,7 @@ const SidebarMenuBadge = React.forwardRef<
     )}
     {...props}
   />
+  )
 })
 SidebarMenuBadge.displayName = "SidebarMenuBadge"
 
