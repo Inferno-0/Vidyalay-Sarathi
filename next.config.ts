@@ -25,16 +25,6 @@ const nextConfig: NextConfig = {
       },
     ],
   },
-  devIndicators: {
-    buildActivity: true,
-    buildActivityPosition: 'bottom-right',
-  },
-  experimental: {
-    allowedDevOrigins: [
-      'https://*.cluster-va5f6x3wzzh4stde63ddr3qgge.cloudworkstations.dev',
-      'http://*.cluster-va5f6x3wzzh4stde63ddr3qgge.cloudworkstations.dev',
-    ],
-  },
 };
 
 export default nextConfig;
