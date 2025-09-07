@@ -59,7 +59,7 @@ const FaceScanner = () => {
     }
   }, []);
 
-  const startVideo = useCallback(async () => {
+  const startVideo = useCallback(async (mode: 'user' | 'environment') => {
     if (videoRef.current && videoRef.current.srcObject) {
         const stream = videoRef.current.srcObject as MediaStream;
         stream.getTracks().forEach(track => track.stop());
@@ -72,7 +72,7 @@ const FaceScanner = () => {
         setLoadingMessage('Accessing camera...');
         const stream = await navigator.mediaDevices.getUserMedia({ 
             video: { 
-                facingMode: facingMode 
+                facingMode: mode 
             } 
         });
         if (videoRef.current) {
@@ -89,7 +89,7 @@ const FaceScanner = () => {
             description: 'Could not access the camera. Please check your browser permissions.',
         });
     }
-  }, [facingMode, toast]);
+  }, [toast]);
   
   const loadKnownFaces = useCallback(async () => {
     if (typeof faceapi === 'undefined') return;
@@ -140,7 +140,7 @@ const FaceScanner = () => {
         const modelsLoaded = await loadModels();
         if (modelsLoaded) {
             await loadKnownFaces();
-            await startVideo();
+            await startVideo(facingMode);
         }
     };
     init();
@@ -229,10 +229,6 @@ const FaceScanner = () => {
       canvas.height = video.videoHeight;
       const context = canvas.getContext('2d');
       if (context) {
-        if (facingMode === 'user') {
-            context.translate(canvas.width, 0);
-            context.scale(-1, 1);
-        }
         context.drawImage(video, 0, 0, canvas.width, canvas.height);
         const dataUrl = canvas.toDataURL('image/jpeg');
         setCapturedImage(dataUrl);
@@ -278,15 +274,12 @@ const FaceScanner = () => {
   }
 
   const toggleCamera = useCallback(() => {
-    setFacingMode(prev => {
-        const newMode = prev === 'user' ? 'environment' : 'user';
-        setFacingMode(newMode);
-        return newMode;
-    });
+    const newMode = facingMode === 'user' ? 'environment' : 'user';
+    setFacingMode(newMode);
     setIsReady(false);
     setLoadingMessage('Switching camera...');
-    startVideo();
-  }, [startVideo]);
+    startVideo(newMode);
+  }, [facingMode, startVideo]);
 
   return (
     <div className="relative w-full h-full bg-card flex items-center justify-center">
@@ -314,9 +307,9 @@ const FaceScanner = () => {
         autoPlay
         muted
         playsInline
-        className={`w-full h-full object-cover transition-opacity duration-500 ${facingMode === 'user' ? 'transform scale-x-[-1]' : ''} ${isReady ? 'opacity-100' : 'opacity-0'}`}
+        className={`w-full h-full object-cover transition-opacity duration-500 ${isReady ? 'opacity-100' : 'opacity-0'}`}
       />
-      <canvas ref={canvasRef} className={`absolute inset-0 w-full h-full ${facingMode === 'user' ? 'transform scale-x-[-1]' : ''}`} />
+      <canvas ref={canvasRef} className="absolute inset-0 w-full h-full" />
       
       {isReady && hasCameraPermission && (
         <Button 
