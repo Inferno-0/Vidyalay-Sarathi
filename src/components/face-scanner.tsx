@@ -57,22 +57,20 @@ const FaceScanner = () => {
     }
   }, []);
 
-  const startVideo = useCallback(async (currentFacingMode: 'user' | 'environment') => {
-    // Stop any existing stream
+  const startVideo = useCallback(async () => {
     if (videoRef.current && videoRef.current.srcObject) {
-        const stream = videoRef.current.srcObject as MediaStream;
-        stream.getTracks().forEach(track => track.stop());
-        videoRef.current.srcObject = null;
+      const stream = videoRef.current.srcObject as MediaStream;
+      stream.getTracks().forEach(track => track.stop());
+      videoRef.current.srcObject = null;
     }
 
-    // A small delay to allow hardware to be released
     await new Promise(resolve => setTimeout(resolve, 100));
-
+    
     try {
         setLoadingMessage('Accessing camera...');
         const stream = await navigator.mediaDevices.getUserMedia({ 
             video: { 
-                facingMode: currentFacingMode 
+                facingMode: facingMode 
             } 
         });
         if (videoRef.current) {
@@ -89,7 +87,7 @@ const FaceScanner = () => {
             description: 'Could not access the camera. Please check your browser permissions.',
         });
     }
-  }, [toast]);
+  }, [facingMode, toast]);
   
   const loadKnownFaces = useCallback(async () => {
     if (typeof faceapi === 'undefined') return;
@@ -140,7 +138,7 @@ const FaceScanner = () => {
         const modelsLoaded = await loadModels();
         if (modelsLoaded) {
             await loadKnownFaces();
-            await startVideo(facingMode);
+            await startVideo();
         }
     };
     init();
@@ -155,14 +153,7 @@ const FaceScanner = () => {
       }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // Restart video when facingMode changes
-  useEffect(() => {
-    if (isReady) { // Only restart if the video was already playing
-        startVideo(facingMode);
-    }
-  }, [facingMode, isReady, startVideo]);
+  }, [facingMode]);
 
   const handlePlay = useCallback(() => {
     setLoadingMessage('');
@@ -378,5 +369,3 @@ const FaceScanner = () => {
 };
 
 export default FaceScanner;
-
-    
