@@ -3,31 +3,11 @@
 import Link from 'next/link';
 import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { CalendarCheck, Users, UserPlus, BookUser } from 'lucide-react';
-import { Carousel, CarouselContent, CarouselItem } from '@/components/ui/carousel';
-import Autoplay from "embla-carousel-autoplay"
 
 
 export default function Home() {
   return (
-    <main className="relative flex flex-col items-center justify-center min-h-screen p-4 overflow-hidden">
-      <div className="absolute inset-0 z-0">
-          <Carousel
-            className="w-full h-full"
-            plugins={[ Autoplay({ delay: 5000, stopOnInteraction: false })]}
-            opts={{ loop: true }}
-          >
-            <CarouselContent>
-              <CarouselItem>
-                <video className="w-full h-full object-cover" autoPlay loop muted playsInline>
-                    <source src="https://cdn.jsdelivr.net/gh/firebase/genkit/site/docs/assets/solutions/vidyalay-sarathi/teacher_takes_attendance_phone.mp4" type="video/mp4" />
-                </video>
-              </CarouselItem>
-            </CarouselContent>
-          </Carousel>
-          <div className="absolute inset-0 bg-background/80 backdrop-blur-sm"></div>
-      </div>
-
-
+    <div className="flex flex-col items-center justify-center flex-1">
       <div className="relative z-10 text-center mb-12">
         <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight mb-2" style={{ color: 'hsl(var(--accent))' }}>
           Vidyalay Sarathi
@@ -86,6 +66,6 @@ export default function Home() {
           </Card>
         </Link>
       </div>
-    </main>
+    </div>
   );
 }
