@@ -13,17 +13,10 @@ interface KnownFace {
   images: string[];
 }
 
-// MOCK DATA - In a real app, this would be a database call
-const mockAttendance: Record<string, Record<string, 'Present' | 'Absent' | 'Leave' | 'Holiday'>> = {
-    "Sanju": {
-        "2025-08-01": "Present",
-        "2025-08-02": "Present",
-    },
-    "Cotton Collector": {
-        "2025-08-01": "Leave",
-        "2025-08-02": "Present",
-    }
-};
+// MOCK DATA - In a real app, this would be a database call.
+// We keep this structure to allow the takeAttendance function to work without a real DB.
+const mockAttendance: Record<string, Record<string, 'Present' | 'Absent' | 'Leave' | 'Holiday'>> = {};
+
 
 // MOCK HOLIDAYS - In a real app, this would be a database call
 const mockHolidays = [
