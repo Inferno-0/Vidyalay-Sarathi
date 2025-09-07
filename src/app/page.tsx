@@ -7,7 +7,7 @@ export default function Home() {
   return (
     <main className="flex flex-col items-center justify-center min-h-screen p-4 bg-background">
       <div className="text-center mb-12">
-        <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight mb-2 text-primary">
+        <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight mb-2" style={{ color: 'hsl(var(--accent))' }}>
           Vidyalay Sarathi
         </h1>
         <p className="text-md md:text-lg text-muted-foreground max-w-md mx-auto">
