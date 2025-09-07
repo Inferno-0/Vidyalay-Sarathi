@@ -65,6 +65,7 @@ export default {
           border: 'hsl(var(--sidebar-border))',
           ring: 'hsl(var(--sidebar-ring))',
         },
+        'beige-100': '#F5F5DC',
       },
       borderRadius: {
         lg: 'var(--radius)',
