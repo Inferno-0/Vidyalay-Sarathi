@@ -29,8 +29,8 @@ export default function MainLayout({ children, title }: MainLayoutProps) {
           <Sidebar>
             <SidebarContent className="flex flex-col">
               <SidebarHeader>
-                <Link href="/" className="font-bold text-2xl text-sidebar-primary">
-                 Vidyalay
+                <Link href="/" className="font-bold text-2xl" style={{ color: '#F97316' }}>
+                 Vidyalay Sarathi
                 </Link>
               </SidebarHeader>
               <SidebarMenu className="flex-1">
