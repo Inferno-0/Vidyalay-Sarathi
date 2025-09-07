@@ -83,13 +83,12 @@ const FaceScanner: React.FC<FaceScannerProps> = ({ mode = 'enrollment', onFaceRe
 
         if (savedFaces.length === 0) {
             setFaceMatcher(null);
-            setLoadingMessage('');
             return;
         }
 
         const labeledFaceDescriptors = await Promise.all(
             savedFaces.map(async (face: KnownFaceData) => {
-                const descriptors: any[] = [];
+                const descriptors: Float32Array[] = [];
                 if (!Array.isArray(face.images)) {
                     console.warn('Skipping face with invalid images format:', face.label);
                     return null;
@@ -101,7 +100,7 @@ const FaceScanner: React.FC<FaceScannerProps> = ({ mode = 'enrollment', onFaceRe
                     }
                     try {
                         const img = await faceapi.fetchImage(image);
-                        const detection = await faceapi.detectSingleFace(img, new faceapi.SsdMobilenetv1Options({ minConfidence: 0.5 })).withFaceLandmarks().withFaceDescriptor();
+                        const detection = await faceapi.detectSingleFace(img).withFaceLandmarks().withFaceDescriptor();
                         if (detection) {
                             descriptors.push(detection.descriptor);
                         }
@@ -117,17 +116,17 @@ const FaceScanner: React.FC<FaceScannerProps> = ({ mode = 'enrollment', onFaceRe
             })
         );
         
-        const validDescriptors = labeledFaceDescriptors.filter(d => d !== null);
+        const validDescriptors = labeledFaceDescriptors.filter(d => d !== null) as faceapi.LabeledFaceDescriptors[];
         if (validDescriptors.length > 0) {
           setFaceMatcher(new faceapi.FaceMatcher(validDescriptors, 0.5));
         } else {
           setFaceMatcher(null);
         }
-
-        setLoadingMessage('');
     } catch (error) {
         console.error("Failed to load known faces from server:", error);
         setLoadingMessage('Could not load known faces.');
+    } finally {
+        setLoadingMessage('');
     }
   }, []);
   
