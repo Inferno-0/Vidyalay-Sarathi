@@ -53,10 +53,14 @@ export default function AttendancePage() {
     const formattedDate = format(date, 'yyyy-MM-dd');
     try {
       await takeAttendance(studentId, formattedDate, status);
-      setStudents(prev => prev.map(s => s.label === studentId ? { ...s, status } : s));
+      // Create a new set to trigger re-render
       if (status === 'Present') {
         markedPresentToday.current.add(studentId);
+      } else {
+        // Optionally handle removing from present if marked otherwise
+        markedPresentToday.current.delete(studentId);
       }
+      setStudents(prev => prev.map(s => s.label === studentId ? { ...s, status } : s));
     } catch (error) {
         toast({ variant: 'destructive', title: 'Error', description: `Failed to mark ${studentId} as ${status}.` });
     }
@@ -94,7 +98,11 @@ export default function AttendancePage() {
         <div className="flex flex-col h-[75vh]">
           <Card className="flex-1 overflow-hidden">
             <CardContent className="p-0 h-full">
-               <FaceScanner onFaceRecognized={onFaceRecognized} mode="attendance" />
+               <FaceScanner 
+                  onFaceRecognized={onFaceRecognized} 
+                  mode="attendance"
+                  recognizedLabels={new Set(Array.from(markedPresentToday.current))}
+                />
             </CardContent>
           </Card>
         </div>

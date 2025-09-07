@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Loader, Camera, SwitchCamera } from 'lucide-react';
+import { Loader, Camera, SwitchCamera, CheckCircle } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { getKnownFaces, saveKnownFace } from '@/app/actions';
 import { Progress } from '@/components/ui/progress';
@@ -26,6 +26,7 @@ interface KnownFaceData {
 interface FaceScannerProps {
   mode?: 'enrollment' | 'attendance';
   onFaceRecognized?: (name: string) => void;
+  recognizedLabels?: Set<string>;
 }
 
 const enrollmentSteps = [
@@ -38,7 +39,7 @@ const enrollmentSteps = [
     "Turn 45 degrees to the left to capture your other jawline."
 ];
 
-const FaceScanner: React.FC<FaceScannerProps> = ({ mode = 'enrollment', onFaceRecognized }) => {
+const FaceScanner: React.FC<FaceScannerProps> = ({ mode = 'enrollment', onFaceRecognized, recognizedLabels = new Set() }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [loadingMessage, setLoadingMessage] = useState('Initializing...');
@@ -220,13 +221,25 @@ const FaceScanner: React.FC<FaceScannerProps> = ({ mode = 'enrollment', onFaceRe
         if (faceMatcher && mode === 'attendance') {
             const bestMatch = faceMatcher.findBestMatch(resizedDetections.descriptor);
             const box = resizedDetections.detection.box;
+            
+            const isRecognized = recognizedLabels.has(bestMatch.label);
+
+            if (isRecognized) {
+              // Persistent green overlay for already marked students
+              ctx.fillStyle = 'rgba(46, 204, 113, 0.4)';
+              ctx.fillRect(box.x, box.y, box.width, box.height);
+              ctx.font = '24px Arial';
+              ctx.fillStyle = 'white';
+              ctx.fillText('✅', box.x + box.width - 30, box.y + 30);
+            }
+
             const drawBox = new faceapi.draw.DrawBox(box, { 
               label: bestMatch.toString(),
-              boxColor: bestMatch.label !== 'unknown' ? '#2ECC71' : '#E74C3C',
+              boxColor: bestMatch.label !== 'unknown' || isRecognized ? '#2ECC71' : '#E74C3C',
             });
             drawBox.draw(canvas);
 
-            if (bestMatch.label !== 'unknown' && onFaceRecognized) {
+            if (bestMatch.label !== 'unknown' && onFaceRecognized && !isRecognized) {
               onFaceRecognized(bestMatch.label);
             }
         } else {
@@ -235,7 +248,7 @@ const FaceScanner: React.FC<FaceScannerProps> = ({ mode = 'enrollment', onFaceRe
       }
     }, 1500);
 
-  }, [isDialogOpen, faceMatcher, mode, onFaceRecognized]);
+  }, [isDialogOpen, faceMatcher, mode, onFaceRecognized, recognizedLabels]);
 
   const handleCaptureFace = () => {
     if (videoRef.current) {
@@ -338,7 +351,7 @@ const FaceScanner: React.FC<FaceScannerProps> = ({ mode = 'enrollment', onFaceRe
          </div>
       )}
       
-      <div className={`relative w-full h-full flex flex-col ${mode === 'enrollment' ? 'md:w-1/2' : 'w-full'}`}>
+      <div className={`relative w-full h-full flex flex-col md:w-1/2`}>
         <div className="relative w-full aspect-video">
           <video
             ref={videoRef}
