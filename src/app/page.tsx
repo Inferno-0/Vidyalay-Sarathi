@@ -80,7 +80,7 @@ const TopFarRightDots = () => (
 
 const CenterTopShape = () => (
     <svg width="60" height="60" viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg" className="absolute top-1/4 left-1/2 -translate-x-1/2 z-0 opacity-50">
-        <rect x="10" y="10" width="40" height="40" rx="20" fill="#FFC8A2" transform="rotate(45 30 30)" />
+        <rect x="10" y="10" width="40" height="40" rx="20" fill="#FFC8A2" />
     </svg>
 );
 
