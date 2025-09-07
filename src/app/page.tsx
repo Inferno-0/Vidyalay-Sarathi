@@ -4,16 +4,29 @@ import Link from 'next/link';
 import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { CalendarCheck, UserPlus, BookUser, Smile } from 'lucide-react';
 
-const Ribbon = () => (
+const TopLeftRibbon = () => (
     <svg width="200" height="200" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg" className="absolute top-0 left-0 z-0 opacity-50">
         <path d="M-50 50C-50 50 50 -50 150 50S250 150 150 150S-50 50 -50 50Z" fill="#FFE9D6"/>
     </svg>
 );
 
-const Bubbles = () => (
+const BottomRightBubbles = () => (
     <svg width="200" height="200" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg" className="absolute bottom-0 right-0 z-0 opacity-50">
         <circle cx="150" cy="150" r="50" fill="#E8F9F2"/>
         <circle cx="175" cy="125" r="25" fill="#E8F9F2"/>
+    </svg>
+);
+
+const TopRightBubbles = () => (
+    <svg width="150" height="150" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg" className="absolute top-[-2rem] right-[-2rem] z-0 opacity-40">
+        <circle cx="100" cy="50" r="80" fill="#D6EAF8" />
+        <circle cx="150" cy="100" r="30" fill="#D6EAF8" />
+    </svg>
+);
+
+const BottomLeftRibbon = () => (
+    <svg width="250" height="250" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg" className="absolute bottom-[-3rem] left-[-3rem] z-0 opacity-30 transform -scale-x-100">
+        <path d="M-50 50C-50 50 50 -50 150 50S250 150 150 150S-50 50 -50 50Z" fill="#FADBD8" />
     </svg>
 );
 
@@ -21,8 +34,10 @@ const Bubbles = () => (
 export default function Home() {
   return (
     <div className="relative flex-1 flex items-center justify-center p-4 overflow-hidden">
-        <Ribbon />
-        <Bubbles />
+        <TopLeftRibbon />
+        <BottomRightBubbles />
+        <TopRightBubbles />
+        <BottomLeftRibbon />
 
         <div className="relative z-10 w-full max-w-4xl p-8">
             <div className="mb-12 text-center">
