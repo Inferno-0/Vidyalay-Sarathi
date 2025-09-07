@@ -1,0 +1,31 @@
+
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Students Collection
+    // - Authenticated users can read student lists.
+    // - Only teachers (with a 'teacher' custom claim) can create, update, or delete students.
+    match /students/{studentId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth.token.teacher == true;
+    }
+
+    // Attendance Collection
+    // - Teachers can create, read, and update any attendance record.
+    // - Students can only read their own attendance records.
+    match /attendance/{attendanceId} {
+      allow read: if request.auth.token.teacher == true || request.auth.uid == resource.data.studentId;
+      allow write: if request.auth.token.teacher == true;
+    }
+
+    // Holidays Collection
+    // - Authenticated users can read the holiday list.
+    // - Only teachers can create or delete holidays.
+    match /holidays/{holidayId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth.token.teacher == true;
+    }
+  }
+}
