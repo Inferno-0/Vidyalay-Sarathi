@@ -38,8 +38,6 @@ const enrollmentSteps: { instruction: string; requiredPose: Pose }[] = [
     { instruction: "Turn your head to the left for the other side profile.", requiredPose: 'left' },
     { instruction: "Tilt your head slightly up.", requiredPose: 'up' },
     { instruction: "Tilt your head slightly down.", requiredPose: 'down' },
-    { instruction: "Turn 45 degrees to the right.", requiredPose: 'right' },
-    { instruction: "Turn 45 degrees to the left.", requiredPose: 'left' }
 ];
 
 const getPose = (landmarks: any): Pose => {
@@ -504,14 +502,14 @@ const FaceScanner: React.FC<FaceScannerProps> = ({ mode = 'enrollment', onFaceRe
           <DialogHeader>
             <DialogTitle>Save New Student</DialogTitle>
             <DialogDescription>
-              Enter the student's details. All 7 images will be saved to their profile.
+              Enter the student's details. All 5 images will be saved to their profile.
             </DialogDescription>
           </DialogHeader>
-          <div className="grid grid-cols-4 gap-2 py-4">
-            {capturedImages.slice(0, 7).map((img, index) => (
+          <div className="grid grid-cols-5 gap-2 py-4">
+            {capturedImages.slice(0, 5).map((img, index) => (
                 <img key={index} src={img} alt={`Capture ${index + 1}`} className="rounded-md w-full h-auto object-cover" />
             ))}
-             {capturedImages.length > 7 && <div className="rounded-md w-full h-auto object-cover bg-muted flex items-center justify-center text-xs">+{capturedImages.length - 7} more</div>}
+             {capturedImages.length > 5 && <div className="rounded-md w-full h-auto object-cover bg-muted flex items-center justify-center text-xs">+{capturedImages.length - 5} more</div>}
           </div>
           <div className="grid gap-4 py-4">
             <div className="grid grid-cols-4 items-center gap-4">
