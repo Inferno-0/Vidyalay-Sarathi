@@ -1,6 +1,7 @@
+
 import Link from 'next/link';
 import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Camera, Users } from 'lucide-react';
+import { CalendarCheck, Users, UserPlus } from 'lucide-react';
 
 export default function Home() {
   return (
@@ -14,23 +15,35 @@ export default function Home() {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 w-full max-w-4xl">
-        <Link href="/scanner" passHref>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 w-full max-w-6xl">
+        <Link href="/attendance" passHref>
           <Card className="group transform transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-primary/20 cursor-pointer">
             <CardHeader className="flex flex-col items-center justify-center p-8 text-center">
-              <Camera className="w-16 h-16 mb-4 text-primary transition-transform duration-300 group-hover:scale-110" />
+              <CalendarCheck className="w-16 h-16 mb-4 text-primary transition-transform duration-300 group-hover:scale-110" />
               <CardTitle className="text-2xl font-bold">Take Attendance</CardTitle>
               <CardDescription className="mt-2 text-muted-foreground">
-                Start the camera to recognize faces and mark attendance.
+                Start the live scanner and mark daily attendance.
               </CardDescription>
             </CardHeader>
           </Card>
         </Link>
         
-        <Link href="/known-faces" passHref>
+        <Link href="/scanner" passHref>
           <Card className="group transform transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-accent/20 cursor-pointer">
             <CardHeader className="flex flex-col items-center justify-center p-8 text-center">
-              <Users className="w-16 h-16 mb-4 text-accent transition-transform duration-300 group-hover:scale-110" />
+              <UserPlus className="w-16 h-16 mb-4 text-accent transition-transform duration-300 group-hover:scale-110" />
+              <CardTitle className="text-2xl font-bold">Add New Student</CardTitle>
+              <CardDescription className="mt-2 text-muted-foreground">
+                Enroll a new face into the recognition system.
+              </CardDescription>
+            </CardHeader>
+          </Card>
+        </Link>
+
+        <Link href="/known-faces" passHref>
+          <Card className="group transform transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-green-500/20 cursor-pointer">
+            <CardHeader className="flex flex-col items-center justify-center p-8 text-center">
+              <Users className="w-16 h-16 mb-4 text-green-500 transition-transform duration-300 group-hover:scale-110" />
               <CardTitle className="text-2xl font-bold">Known Faces</CardTitle>
               <CardDescription className="mt-2 text-muted-foreground">
                 View and manage the list of recognized individuals.

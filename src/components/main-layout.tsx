@@ -5,7 +5,7 @@ import React from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
-import { Menu, Home, Camera, Users, CalendarCheck } from 'lucide-react';
+import { Menu, Home, UserPlus, Users, CalendarCheck } from 'lucide-react';
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -14,9 +14,9 @@ interface MainLayoutProps {
 
 const navLinks = [
   { href: '/', label: 'Home', icon: Home },
-  { href: '/scanner', label: 'Take Attendance', icon: Camera },
+  { href: '/scanner', label: 'Add New Student', icon: UserPlus },
   { href: '/known-faces', label: 'Known Faces', icon: Users },
-  { href: '/attendance', label: 'Attendance History', icon: CalendarCheck },
+  { href: '/attendance', label: 'Take Attendance', icon: CalendarCheck },
 ];
 
 export default function MainLayout({ children, title }: MainLayoutProps) {

@@ -1,151 +1,182 @@
 
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Calendar } from "@/components/ui/calendar"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Button } from '@/components/ui/button';
 import { getKnownFaces, getAttendanceForStudent, takeAttendance } from '@/app/actions';
-import { Loader2, CheckCircle, XCircle, Info, Plane } from 'lucide-react';
+import { Loader2, CheckCircle, XCircle, Plane, UserCheck, UserX, UserPlus } from 'lucide-react';
 import MainLayout from '@/components/main-layout';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
+import { Badge } from '@/components/ui/badge';
 
-interface KnownFace {
+declare const faceapi: any;
+const MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model/';
+
+interface Student {
   label: string;
   images: string[];
+  status: 'Present' | 'Absent' | 'Leave' | 'Holiday' | 'Not Marked';
 }
 
-type AttendanceStatus = 'Present' | 'Absent' | 'Leave' | 'Holiday' | 'Not Marked';
-
 export default function AttendancePage() {
-  const [date, setDate] = useState<Date | undefined>(new Date());
-  const [students, setStudents] = useState<KnownFace[]>([]);
-  const [selectedStudent, setSelectedStudent] = useState<string>('');
-  const [loadingStudents, setLoadingStudents] = useState(true);
-  const [loadingAttendance, setLoadingAttendance] = useState(false);
-  const [attendanceStatus, setAttendanceStatus] = useState<AttendanceStatus>('Not Marked');
+  const [date] = useState(new Date());
+  const [students, setStudents] = useState<Student[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [isScannerReady, setIsScannerReady] = useState(false);
   const { toast } = useToast();
 
-  const fetchStudents = useCallback(async () => {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const detectionInterval = useRef<NodeJS.Timeout>();
+  const [knownFaces, setKnownFaces] = useState<any[]>([]);
+
+  // Load models and known faces
+  const setupFaceScanner = useCallback(async () => {
+    if (typeof faceapi === 'undefined') {
+        setTimeout(setupFaceScanner, 500);
+        return;
+    }
+    await Promise.all([
+      faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
+      faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
+      faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL),
+    ]);
+
+    const savedFaces = await getKnownFaces();
+    const labeledFaceDescriptors = await Promise.all(
+        savedFaces.map(async (face) => {
+            const descriptors: any[] = [];
+            for (const image of face.images) {
+              try {
+                  const img = await faceapi.fetchImage(image);
+                  const detection = await faceapi.detectSingleFace(img, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceDescriptor();
+                  if (detection) descriptors.push(detection.descriptor);
+              } catch (e) { console.error("Error processing image for", face.label, e); }
+            }
+            if (descriptors.length > 0) return new faceapi.LabeledFaceDescriptors(face.label, descriptors);
+            return null;
+        })
+    );
+    setKnownFaces(labeledFaceDescriptors.filter(d => d !== null));
+    setIsScannerReady(true);
+  }, []);
+
+  const startVideo = useCallback(async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: {} });
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+      }
+    } catch (err) {
+      console.error('Error accessing camera:', err);
+      toast({ variant: 'destructive', title: 'Camera Error', description: 'Could not access the camera.' });
+    }
+  }, [toast]);
+  
+  const fetchStudentsAndAttendance = useCallback(async () => {
+    setLoading(true);
     try {
       const knownFaces = await getKnownFaces();
-      setStudents(knownFaces);
-      if (knownFaces.length > 0) {
-        setSelectedStudent(knownFaces[0].label);
-      }
+      const formattedDate = format(date, 'yyyy-MM-dd');
+      
+      const studentsWithAttendance = await Promise.all(
+        knownFaces.map(async (face) => {
+          const status = await getAttendanceForStudent(face.label, formattedDate);
+          return { ...face, status };
+        })
+      );
+      setStudents(studentsWithAttendance);
     } catch (error) {
       console.error("Failed to load students:", error);
     } finally {
-      setLoadingStudents(false);
+      setLoading(false);
     }
-  }, []);
-
-  const fetchAttendance = useCallback(async () => {
-    if (!selectedStudent || !date) return;
-    setLoadingAttendance(true);
-    try {
-      const formattedDate = format(date, 'yyyy-MM-dd');
-      const status = await getAttendanceForStudent(selectedStudent, formattedDate);
-      setAttendanceStatus(status);
-    } catch (error) {
-      console.error("Failed to fetch attendance:", error);
-    } finally {
-      setLoadingAttendance(false);
-    }
-  }, [selectedStudent, date]);
+  }, [date]);
 
   useEffect(() => {
-    fetchStudents();
-  }, [fetchStudents]);
+    fetchStudentsAndAttendance();
+    setupFaceScanner();
 
-  useEffect(() => {
-    fetchAttendance();
-  }, [fetchAttendance]);
+    return () => {
+        if (detectionInterval.current) clearInterval(detectionInterval.current);
+        if (videoRef.current?.srcObject) {
+            const stream = videoRef.current.srcObject as MediaStream;
+            stream.getTracks().forEach(track => track.stop());
+        }
+    };
+  }, [fetchStudentsAndAttendance, setupFaceScanner]);
 
-  const handleMarkAttendance = async (status: 'Present' | 'Absent' | 'Leave') => {
-    if (!selectedStudent || !date) return;
-    
-    setLoadingAttendance(true);
-    try {
-      const formattedDate = format(date, 'yyyy-MM-dd');
-      await takeAttendance(selectedStudent, formattedDate, status);
-      setAttendanceStatus(status); // Optimistically update UI
-      toast({
-        title: 'Success',
-        description: `${selectedStudent}'s attendance marked as ${status}.`,
-      });
-    } catch (error) {
-      console.error("Error marking attendance:", error);
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: 'Failed to mark attendance.',
-      });
-    } finally {
-      setLoadingAttendance(false);
-    }
+  const handleMarkAttendance = async (studentId: string, status: 'Present' | 'Absent' | 'Leave') => {
+    const formattedDate = format(date, 'yyyy-MM-dd');
+    await takeAttendance(studentId, formattedDate, status);
+    // Optimistic update
+    setStudents(prev => prev.map(s => s.label === studentId ? { ...s, status } : s));
   };
   
-  const StatusDisplay = () => {
-    if (loadingAttendance) {
-        return (
-            <div className="flex items-center text-muted-foreground">
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                <span>Loading...</span>
-            </div>
-        );
+  const handlePlay = useCallback(() => {
+    if (detectionInterval.current) clearInterval(detectionInterval.current);
+
+    detectionInterval.current = setInterval(async () => {
+        if (!videoRef.current || videoRef.current.paused || typeof faceapi === 'undefined' || knownFaces.length === 0) return;
+
+        const detections = await faceapi.detectAllFaces(videoRef.current, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceDescriptors();
+        if (detections.length === 0) return;
+
+        const faceMatcher = new faceapi.FaceMatcher(knownFaces, 0.6);
+        for (const detection of detections) {
+            const bestMatch = faceMatcher.findBestMatch(detection.descriptor);
+            if (bestMatch.label !== 'unknown') {
+                const student = students.find(s => s.label === bestMatch.label);
+                if (student && student.status !== 'Present') {
+                    handleMarkAttendance(bestMatch.label, 'Present');
+                    toast({
+                      title: 'Attendance Marked',
+                      description: `${bestMatch.label} marked as Present.`,
+                      className: 'bg-green-100 dark:bg-green-900'
+                    });
+                }
+            }
+        }
+    }, 2000);
+  }, [knownFaces, students, toast]);
+
+  useEffect(() => {
+    if (isScannerReady) {
+        startVideo();
     }
-    
-    switch (attendanceStatus) {
-        case 'Present':
-            return <div className="flex items-center text-green-600"><CheckCircle className="mr-2 h-4 w-4" />Present</div>;
-        case 'Absent':
-            return <div className="flex items-center text-red-600"><XCircle className="mr-2 h-4 w-4" />Absent</div>;
-        case 'Leave':
-            return <div className="flex items-center text-blue-600"><Plane className="mr-2 h-4 w-4" />On Leave</div>;
-        case 'Holiday':
-            return <div className="flex items-center text-gray-500"><Info className="mr-2 h-4 w-4" />Holiday</div>;
-        default:
-            return <div className="flex items-center text-gray-500"><Info className="mr-2 h-4 w-4" />Not Marked</div>;
+  }, [isScannerReady, startVideo]);
+  
+  const getStatusBadge = (status: Student['status']) => {
+    switch (status) {
+        case 'Present': return <Badge variant="default" className="bg-green-600">Present</Badge>;
+        case 'Absent': return <Badge variant="destructive">Absent</Badge>;
+        case 'Leave': return <Badge variant="secondary" className="bg-blue-600 text-white">On Leave</Badge>;
+        case 'Holiday': return <Badge variant="outline">Holiday</Badge>;
+        default: return <Badge variant="outline">Not Marked</Badge>;
     }
   };
 
-
   return (
-    <MainLayout title="Attendance Manager">
-      <div className="w-full grid md:grid-cols-2 gap-8">
+    <MainLayout title="Take Attendance">
+      <div className="w-full grid lg:grid-cols-2 gap-8">
         <div className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Select Student & Date</CardTitle>
+              <CardTitle>Live Camera Feed</CardTitle>
+              <CardDescription>{format(date, 'PPP')}</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              {loadingStudents ? (
-                <div className="flex items-center justify-center py-4">
-                  <Loader2 className="h-6 w-6 animate-spin text-primary" />
-                </div>
-              ) : (
-                <Select value={selectedStudent} onValueChange={setSelectedStudent}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a student" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {students.map(student => (
-                      <SelectItem key={student.label} value={student.label}>
-                        {student.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
-              <Calendar
-                mode="single"
-                selected={date}
-                onSelect={setDate}
-                className="rounded-md border not-prose"
-              />
+            <CardContent>
+              <div className="relative w-full aspect-video bg-muted rounded-md overflow-hidden flex items-center justify-center">
+                {!isScannerReady ? (
+                    <div className="text-center">
+                        <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2" />
+                        <p>Initializing Scanner...</p>
+                    </div>
+                ) : (
+                    <video ref={videoRef} autoPlay muted playsInline onPlay={handlePlay} className="w-full h-full object-cover transform scale-x-[-1]" />
+                )}
+              </div>
             </CardContent>
           </Card>
         </div>
@@ -153,39 +184,28 @@ export default function AttendancePage() {
         <div className="space-y-6">
             <Card>
                 <CardHeader>
-                    <CardTitle>Mark Attendance</CardTitle>
-                    <CardDescription>
-                        {date ? format(date, "PPP") : 'No date selected'}
-                    </CardDescription>
+                    <CardTitle>Student Roster</CardTitle>
+                    <CardDescription>Attendance status for today</CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                    <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
-                        <span className="font-medium">Status:</span>
-                        <div className="font-semibold text-lg">
-                            <StatusDisplay />
+                <CardContent className="space-y-2 max-h-[60vh] overflow-y-auto">
+                  {loading ? (
+                     <div className="text-center py-8"><Loader2 className="h-8 w-8 animate-spin mx-auto" /></div>
+                  ) : (
+                    students.map(student => (
+                        <div key={student.label} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                           <span className="font-medium text-lg">{student.label}</span>
+                           <div className="flex items-center gap-2">
+                                {getStatusBadge(student.status)}
+                                {student.status !== 'Present' && student.status !== 'Holiday' && (
+                                  <>
+                                    <Button size="sm" variant="destructive" onClick={() => handleMarkAttendance(student.label, 'Absent')}><UserX className="h-4 w-4" /></Button>
+                                    <Button size="sm" className="bg-blue-500 hover:bg-blue-600" onClick={() => handleMarkAttendance(student.label, 'Leave')}><Plane className="h-4 w-4" /></Button>
+                                  </>
+                                )}
+                           </div>
                         </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                        <Button 
-                          onClick={() => handleMarkAttendance('Present')} 
-                          disabled={loadingAttendance || attendanceStatus === 'Holiday'}
-                          className="bg-green-500 hover:bg-green-600">
-                            Present
-                        </Button>
-                        <Button 
-                          onClick={() => handleMarkAttendance('Absent')} 
-                          disabled={loadingAttendance || attendanceStatus === 'Holiday'}
-                          variant="destructive">
-                            Absent
-                        </Button>
-                        <Button 
-                          onClick={() => handleMarkAttendance('Leave')} 
-                          disabled={loadingAttendance || attendanceStatus === 'Holiday'}
-                          className="bg-blue-500 hover:bg-blue-600">
-                            On Leave
-                        </Button>
-                    </div>
+                    ))
+                  )}
                 </CardContent>
             </Card>
         </div>
