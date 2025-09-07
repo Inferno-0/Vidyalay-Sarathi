@@ -30,7 +30,7 @@ interface FaceScannerProps {
   recognizedLabels?: Set<string>;
 }
 
-type Pose = 'front' | 'left' | 'right' | 'up' | 'down' | 'jaw_left' | 'jaw_right' | 'unknown';
+type Pose = 'front' | 'left' | 'right' | 'up' | 'down' | 'unknown';
 
 const enrollmentSteps: { instruction: string; requiredPose: Pose }[] = [
     { instruction: "Look directly at the camera for a front-facing view.", requiredPose: 'front' },
@@ -38,37 +38,48 @@ const enrollmentSteps: { instruction: string; requiredPose: Pose }[] = [
     { instruction: "Turn your head to the left for the other side profile.", requiredPose: 'left' },
     { instruction: "Tilt your head slightly up.", requiredPose: 'up' },
     { instruction: "Tilt your head slightly down.", requiredPose: 'down' },
-    { instruction: "Turn 45 degrees to the right.", requiredPose: 'jaw_right' },
-    { instruction: "Turn 45 degrees to the left.", requiredPose: 'jaw_left' }
+    { instruction: "Turn 45 degrees to the right.", requiredPose: 'right' },
+    { instruction: "Turn 45 degrees to the left.", requiredPose: 'left' }
 ];
 
 const getPose = (landmarks: any): Pose => {
     if (!landmarks) return 'unknown';
 
-    const nose = landmarks.getNose()[3];
-    const leftEye = landmarks.getLeftEye()[0];
-    const rightEye = landmarks.getRightEye()[3];
     const jawOutline = landmarks.getJawOutline();
+    const nose = landmarks.getNose();
+    const leftEye = landmarks.getLeftEye();
+    const rightEye = landmarks.getRightEye();
+
+    // Points for symmetry calculation (yaw)
+    const leftJaw = jawOutline[0];
+    const rightJaw = jawOutline[16];
+    const noseTip = nose[3];
+
+    // Points for pitch calculation
     const chin = jawOutline[8];
+    const noseBridge = nose[0];
 
-    const eyeMidPoint = { x: (leftEye.x + rightEye.x) / 2, y: (leftEye.y + rightEye.y) / 2 };
-    const eyeDist = Math.sqrt(Math.pow(rightEye.x - leftEye.x, 2) + Math.pow(rightEye.y - leftEye.y, 2));
+    // Calculate yaw based on facial symmetry
+    const distLeft = Math.sqrt(Math.pow(noseTip.x - leftJaw.x, 2) + Math.pow(noseTip.y - leftJaw.y, 2));
+    const distRight = Math.sqrt(Math.pow(noseTip.x - rightJaw.x, 2) + Math.pow(noseTip.y - rightJaw.y, 2));
+    const yawRatio = distLeft / distRight;
 
-    const noseToMidEyeX = nose.x - eyeMidPoint.x;
-    const yawRatio = noseToMidEyeX / eyeDist;
-    const pitchRatio = (chin.y - nose.y) / eyeDist;
+    // Calculate pitch based on vertical positions
+    const eyeMidY = (leftEye[0].y + rightEye[0].y) / 2;
+    const pitchRatio = (chin.y - eyeMidY) / (eyeMidY - noseBridge.y);
+    
+    // Determine pose
+    if (yawRatio > 1.8) return 'left';
+    if (yawRatio < 0.5) return 'right';
 
-    if (yawRatio < -0.35) return 'right';
-    if (yawRatio > 0.35) return 'left';
-    if (pitchRatio > 1.2) return 'down'; 
-    if (pitchRatio < 0.95) return 'up';
-    if (Math.abs(yawRatio) < 0.15) return 'front';
-    if (yawRatio < -0.15) return 'jaw_right';
-    if (yawRatio > 0.15) return 'jaw_left';
+    if (pitchRatio > 6) return 'down';
+    if (pitchRatio < 2.5) return 'up';
+
+    // If not significantly turned or tilted, it's a front pose
+    if (yawRatio > 0.85 && yawRatio < 1.15) return 'front';
 
     return 'unknown';
 };
-
 
 const FaceScanner: React.FC<FaceScannerProps> = ({ mode = 'enrollment', onFaceRecognized, recognizedLabels = new Set() }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -404,8 +415,6 @@ const FaceScanner: React.FC<FaceScannerProps> = ({ mode = 'enrollment', onFaceRe
       case 'right': return { text: "Please turn your head fully to the right.", color: "text-red-600" };
       case 'up': return { text: "Please tilt your head up.", color: "text-red-600" };
       case 'down': return { text: "Please tilt your head down.", color: "text-red-600" };
-      case 'jaw_left': return { text: "Turn slightly left (45°).", color: "text-red-600" };
-      case 'jaw_right': return { text: "Turn slightly right (45°).", color: "text-red-600" };
       default: return { text: "Searching for face...", color: "text-muted-foreground" };
     }
   };
@@ -529,4 +538,6 @@ const FaceScanner: React.FC<FaceScannerProps> = ({ mode = 'enrollment', onFaceRe
 };
 
 export default FaceScanner;
+    
+
     
