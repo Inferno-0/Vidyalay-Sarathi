@@ -79,8 +79,13 @@ export default function AttendancePage() {
   useEffect(() => {
     const today = new Date();
     setDate(today);
-    fetchStudentsAndAttendance(today);
-  }, [fetchStudentsAndAttendance]);
+  }, []);
+
+  useEffect(() => {
+    if (date) {
+      fetchStudentsAndAttendance(date);
+    }
+  }, [fetchStudentsAndAttendance, date]);
 
   
   const getStatusBadge = (status: Student['status']) => {
