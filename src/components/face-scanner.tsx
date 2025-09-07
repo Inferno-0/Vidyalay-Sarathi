@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Loader, Camera, SwitchCamera, UserCheck, CheckCircle, HelpCircle } from 'lucide-react';
+import { Loader, Camera, SwitchCamera, UserCheck, CheckCircle } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { getKnownFaces, saveKnownFace } from '@/app/actions';
 import { Progress } from '@/components/ui/progress';
@@ -42,42 +42,35 @@ const enrollmentSteps: { instruction: string; requiredPose: Pose }[] = [
     { instruction: "Turn 45 degrees to the left.", requiredPose: 'jaw_left' }
 ];
 
-
 const getPose = (landmarks: any): Pose => {
     if (!landmarks) return 'unknown';
 
-    const nose = landmarks.getNose()[3]; // Tip of the nose
+    const nose = landmarks.getNose()[3];
     const leftEye = landmarks.getLeftEye()[0];
     const rightEye = landmarks.getRightEye()[3];
     const jawline = landmarks.getJawOutline();
-    const chin = jawline[8]; // Bottom of the chin
+    const chin = jawline[8];
 
     const eyeMidPoint = { x: (leftEye.x + rightEye.x) / 2, y: (leftEye.y + rightEye.y) / 2 };
     const eyeDist = Math.abs(leftEye.x - rightEye.x);
 
-    // Yaw (left/right)
     const noseToMidEyeX = nose.x - eyeMidPoint.x;
     const yawRatio = noseToMidEyeX / eyeDist;
 
-    // Pitch (up/down)
     const noseToMidEyeY = nose.y - eyeMidPoint.y;
     const pitchRatio = noseToMidEyeY / eyeDist;
 
-    if (pitchRatio > 0.4) return 'down';
+    if (pitchRatio > 0.35) return 'down';
     if (pitchRatio < -0.1) return 'up';
-
     if (yawRatio > 0.25) return 'left';
     if (yawRatio < -0.25) return 'right';
-
     if (Math.abs(yawRatio) > 0.1 && Math.abs(yawRatio) < 0.25) {
         return yawRatio > 0 ? 'jaw_left' : 'jaw_right';
     }
-
     if (Math.abs(yawRatio) < 0.1 && pitchRatio < 0.4 && pitchRatio > -0.1) return 'front';
 
     return 'unknown';
-}
-
+};
 
 const FaceScanner: React.FC<FaceScannerProps> = ({ mode = 'enrollment', onFaceRecognized, recognizedLabels = new Set() }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -95,6 +88,8 @@ const FaceScanner: React.FC<FaceScannerProps> = ({ mode = 'enrollment', onFaceRe
   const [facingMode, setFacingMode] = useState<'user' | 'environment'>('user');
   const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
   const [currentPose, setCurrentPose] = useState<Pose>('unknown');
+  const poseHeldSince = useRef<number | null>(null);
+  const [captureCountdown, setCaptureCountdown] = useState<number | null>(null);
 
   const loadModels = useCallback(async () => {
     if (typeof faceapi === 'undefined') {
@@ -130,7 +125,7 @@ const FaceScanner: React.FC<FaceScannerProps> = ({ mode = 'enrollment', onFaceRe
         }
 
         const labeledFaceDescriptors = await Promise.all(
-            savedFaces.map(async (face: KnownFaceData) => {
+            savedFaces.map(async (face) => {
                 const descriptors: Float32Array[] = [];
                 if (!Array.isArray(face.images)) return null;
                 
@@ -152,7 +147,7 @@ const FaceScanner: React.FC<FaceScannerProps> = ({ mode = 'enrollment', onFaceRe
             })
         );
         
-        const validDescriptors = labeledFaceDescriptors.filter(d => d !== null) as faceapi.LabeledFaceDescriptors[];
+        const validDescriptors = labeledFaceDescriptors.filter(d => d !== null) as any[];
         if (validDescriptors.length > 0) {
           setFaceMatcher(new faceapi.FaceMatcher(validDescriptors, 0.5));
         } else {
@@ -217,6 +212,31 @@ const FaceScanner: React.FC<FaceScannerProps> = ({ mode = 'enrollment', onFaceRe
     }
   }, [loadModels, loadKnownFaces, startVideo]);
   
+  const handleCaptureFace = useCallback(() => {
+    if (videoRef.current) {
+      const video = videoRef.current;
+      const canvas = document.createElement('canvas');
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const context = canvas.getContext('2d');
+      if (context) {
+        if (facingMode === 'user') {
+            context.translate(canvas.width, 0);
+            context.scale(-1, 1);
+        }
+        context.drawImage(video, 0, 0, canvas.width, canvas.height);
+        const dataUrl = canvas.toDataURL('image/jpeg');
+        const newImages = [...capturedImages, dataUrl];
+        setCapturedImages(newImages);
+
+        if (enrollmentStep < enrollmentSteps.length - 1) {
+            setEnrollmentStep(prev => prev + 1);
+        } else {
+            setIsDialogOpen(true);
+        }
+      }
+    }
+  }, [capturedImages, enrollmentStep, facingMode]);
 
   const handlePlay = useCallback(() => {
     setLoadingMessage('');
@@ -249,83 +269,80 @@ const FaceScanner: React.FC<FaceScannerProps> = ({ mode = 'enrollment', onFaceRe
       
       if (detection) {
         const resizedDetections = faceapi.resizeResults(detection, displaySize);
-        if (mode === 'enrollment') {
-            setCurrentPose(getPose(resizedDetections.landmarks));
-        }
+        const currentDetectedPose = getPose(resizedDetections.landmarks);
+        setCurrentPose(currentDetectedPose);
+        
+        let label = 'Unknown';
+        let boxColor = '#E74C3C'; // Red for unknown
         
         if (faceMatcher) {
             const bestMatch = faceMatcher.findBestMatch(resizedDetections.descriptor);
-            const box = resizedDetections.detection.box;
-            
-            const isKnown = bestMatch.label !== 'unknown';
-            const isAlreadyProcessed = recognizedLabels.has(bestMatch.label);
-
-            if (isKnown) {
-                 if (mode === 'attendance') {
-                    const isMarked = recognizedLabels.has(bestMatch.label);
-                    const boxColor = isMarked ? '#2ECC71' : '#3498DB';
-                    const label = isMarked ? `${bestMatch.label} (Present)` : bestMatch.label;
-                    const drawBox = new faceapi.draw.DrawBox(box, { label, boxColor });
-                    drawBox.draw(canvas);
-
-                    if (isMarked) {
-                        ctx.fillStyle = 'rgba(46, 204, 113, 0.4)';
-                        ctx.fillRect(box.x, box.y, box.width, box.height);
-                        ctx.fillStyle = 'white';
-                        ctx.font = '24px Arial';
-                        ctx.fillText('✓', box.x + 10, box.y + 28);
-                    } else if (onFaceRecognized) {
-                       onFaceRecognized(bestMatch.label);
-                    }
-                } else if (mode === 'enrollment') {
-                    setAlreadyEnrolledMessage(`${bestMatch.label} is already enrolled.`);
-                    const drawBox = new faceapi.draw.DrawBox(box, { label: bestMatch.label, boxColor: '#2ECC71' });
-                    drawBox.draw(canvas);
+            if (bestMatch.label !== 'unknown') {
+                label = bestMatch.label;
+                boxColor = '#2ECC71'; // Green for known
+                if (mode === 'enrollment') {
+                   setAlreadyEnrolledMessage(`${label} is already enrolled.`);
                 }
-            } else { // Face is 'unknown'
+            } else {
                  setAlreadyEnrolledMessage(null);
-                const drawBox = new faceapi.draw.DrawBox(box, { label: 'Unknown', boxColor: '#E74C3C' });
-                drawBox.draw(canvas);
             }
-        } else { // No faceMatcher loaded yet
-            setAlreadyEnrolledMessage(null);
-            faceapi.draw.drawDetections(canvas, resizedDetections);
         }
-      } else {
-        setAlreadyEnrolledMessage(null);
-        if (mode === 'enrollment') {
-            setCurrentPose('unknown');
-        }
-      }
-    }, 500); // Check every 500ms
+        
+        const isPoseCorrect = mode === 'enrollment' && enrollmentStep < enrollmentSteps.length && currentDetectedPose === enrollmentSteps[enrollmentStep].requiredPose;
 
-  }, [isDialogOpen, faceMatcher, mode, onFaceRecognized, recognizedLabels]);
-
-  const handleCaptureFace = () => {
-    if (videoRef.current) {
-      const video = videoRef.current;
-      const canvas = document.createElement('canvas');
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
-      const context = canvas.getContext('2d');
-      if (context) {
-        if (facingMode === 'user') {
-            context.translate(canvas.width, 0);
-            context.scale(-1, 1);
-        }
-        context.drawImage(video, 0, 0, canvas.width, canvas.height);
-        const dataUrl = canvas.toDataURL('image/jpeg');
-        const newImages = [...capturedImages, dataUrl];
-        setCapturedImages(newImages);
-
-        if (enrollmentStep < enrollmentSteps.length - 1) {
-            setEnrollmentStep(prev => prev + 1);
+        // Auto-capture logic for enrollment
+        if (mode === 'enrollment' && isPoseCorrect && !alreadyEnrolledMessage) {
+            if (poseHeldSince.current === null) {
+                poseHeldSince.current = Date.now();
+            } else if (Date.now() - poseHeldSince.current > 2000) { // 2 second hold
+                handleCaptureFace();
+                poseHeldSince.current = null;
+                setCaptureCountdown(null);
+            } else {
+                 const timeLeft = 2 - Math.floor((Date.now() - poseHeldSince.current) / 1000);
+                 setCaptureCountdown(timeLeft);
+            }
         } else {
-            setIsDialogOpen(true);
+            poseHeldSince.current = null;
+            setCaptureCountdown(null);
         }
+
+        // Drawing logic
+        if (mode === 'attendance') {
+            const isMarked = recognizedLabels.has(label);
+            if (label !== 'Unknown') {
+              if (isMarked) {
+                  const drawBox = new faceapi.draw.DrawBox(resizedDetections.detection.box, { label: `${label} (Present)`, boxColor: '#2ECC71' });
+                  drawBox.draw(canvas);
+                  ctx.fillStyle = 'rgba(46, 204, 113, 0.4)';
+                  ctx.fillRect(resizedDetections.detection.box.x, resizedDetections.detection.box.y, resizedDetections.detection.box.width, resizedDetections.detection.box.height);
+                  ctx.fillStyle = 'white';
+                  ctx.font = '24px Arial';
+                  ctx.fillText('✓', resizedDetections.detection.box.x + 10, resizedDetections.detection.box.y + 28);
+              } else if (onFaceRecognized) {
+                  const drawBox = new faceapi.draw.DrawBox(resizedDetections.detection.box, { label, boxColor: '#3498DB' });
+                  drawBox.draw(canvas);
+                  onFaceRecognized(label);
+              }
+            } else {
+                 const drawBox = new faceapi.draw.DrawBox(resizedDetections.detection.box, { label, boxColor });
+                 drawBox.draw(canvas);
+            }
+        } else { // Enrollment or other modes
+             const drawBox = new faceapi.draw.DrawBox(resizedDetections.detection.box, { label, boxColor });
+             drawBox.draw(canvas);
+        }
+        
+      } else {
+        setCurrentPose('unknown');
+        setAlreadyEnrolledMessage(null);
+        poseHeldSince.current = null;
+        setCaptureCountdown(null);
       }
-    }
-  };
+    }, 500);
+
+  }, [isDialogOpen, faceMatcher, mode, onFaceRecognized, recognizedLabels, handleCaptureFace, enrollmentStep, alreadyEnrolledMessage]);
+
 
   const handleSaveFace = async () => {
     if (newFaceData.name && capturedImages.length === enrollmentSteps.length) {
@@ -369,11 +386,20 @@ const FaceScanner: React.FC<FaceScannerProps> = ({ mode = 'enrollment', onFaceRe
   }, []);
 
   const progress = (enrollmentStep / enrollmentSteps.length) * 100;
-  const isPoseCorrect = currentPose === enrollmentSteps[enrollmentStep].requiredPose;
+  const isPoseCorrect = currentPose === enrollmentSteps[enrollmentStep]?.requiredPose;
 
   const getPoseFeedback = () => {
+    if (alreadyEnrolledMessage) return { text: "Already registered.", color: "text-yellow-600" };
+    if (!enrollmentSteps[enrollmentStep]) return { text: "Scan Complete!", color: "text-green-600" };
+
     const required = enrollmentSteps[enrollmentStep].requiredPose;
-    if (isPoseCorrect) return { text: "Pose Correct!", color: "text-green-600" };
+    if (isPoseCorrect) {
+        if (captureCountdown !== null) {
+            return { text: `Hold it... ${captureCountdown}`, color: "text-blue-600" };
+        }
+        return { text: "Pose Correct! Hold still...", color: "text-green-600" };
+    }
+
     switch (required) {
         case 'front': return { text: "Please look straight ahead.", color: "text-red-600" };
         case 'left': return { text: "Please turn your head to the left.", color: "text-red-600" };
@@ -399,22 +425,16 @@ const FaceScanner: React.FC<FaceScannerProps> = ({ mode = 'enrollment', onFaceRe
         ) : (
           <>
             <p className="text-lg font-semibold mb-2">Step {enrollmentStep + 1} of {enrollmentSteps.length}</p>
-            <p className="text-muted-foreground mb-4">{enrollmentSteps[enrollmentStep].instruction}</p>
+            <p className="text-muted-foreground mb-4">{enrollmentSteps[enrollmentStep]?.instruction || "All poses captured!"}</p>
             <Progress value={progress} className="w-full mb-4" />
-            <div className="my-4">
-                <Badge variant={isPoseCorrect ? "default" : "destructive"} className={`transition-all duration-300 ${isPoseCorrect ? 'bg-green-600' : ''}`}>
+            <div className="my-4 h-6">
+                <Badge variant={isPoseCorrect ? "default" : "destructive"} className={`transition-all duration-300 ${isPoseCorrect ? 'bg-green-600' : ''} ${poseFeedback.color.includes('blue') ? 'bg-blue-600' : ''}`}>
                     <span className={`font-bold ${poseFeedback.color}`}>{poseFeedback.text}</span>
                 </Badge>
             </div>
-            <Button 
-                onClick={handleCaptureFace} 
-                size="lg" 
-                className="w-full" 
-                disabled={!!alreadyEnrolledMessage || !isPoseCorrect}
-            >
-                <Camera className="mr-2 h-5 w-5" />
-                Capture Pose
-            </Button>
+             {captureCountdown !== null && (
+                 <div className="text-6xl font-bold text-primary my-4">{captureCountdown}</div>
+             )}
           </>
         )}
     </div>
@@ -431,7 +451,7 @@ const FaceScanner: React.FC<FaceScannerProps> = ({ mode = 'enrollment', onFaceRe
       
       {hasCameraPermission === false && (
          <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-background/80 backdrop-blur-sm p-4">
-             <Alert variant="destructive" className="max-w-md">
+            <Alert variant="destructive" className="max-w-md">
               <AlertTitle>Camera Access Denied</AlertTitle>
               <AlertDescription>
                 Please enable camera permissions in your browser settings to use this feature. You may need to refresh the page after granting permissions.
@@ -509,6 +529,4 @@ const FaceScanner: React.FC<FaceScannerProps> = ({ mode = 'enrollment', onFaceRe
 };
 
 export default FaceScanner;
-    
-
     
