@@ -62,11 +62,9 @@ const getPose = (landmarks: any): Pose => {
     if (yawRatio > 0.35) return 'left';
     if (pitchRatio > 1.2) return 'down'; 
     if (pitchRatio < 0.95) return 'up';
+    if (Math.abs(yawRatio) < 0.15) return 'front';
     if (yawRatio < -0.15) return 'jaw_right';
     if (yawRatio > 0.15) return 'jaw_left';
-    
-    // Check for front last, as it's the default neutral pose.
-    if (Math.abs(yawRatio) < 0.15) return 'front';
 
     return 'unknown';
 };
