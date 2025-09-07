@@ -22,11 +22,6 @@ export default function RootLayout({
       </head>
       <body className="font-body antialiased">
         <main className="relative flex flex-col min-h-screen">
-             <div className="fixed bottom-4 right-4 z-20 w-48 h-48 md:w-64 md:h-64 rounded-2xl shadow-2xl overflow-hidden pointer-events-none">
-                <video className="w-full h-full object-cover" autoPlay loop muted playsInline>
-                    <source src="https://cdn.jsdelivr.net/gh/firebase/genkit/site/docs/assets/solutions/vidyalay-sarathi/teacher_takes_attendance_phone.mp4" type="video/mp4" />
-                </video>
-            </div>
             {children}
         </main>
         <Toaster />
