@@ -19,17 +19,17 @@ interface Student {
 }
 
 export default function AttendancePage() {
-  const [date] = useState(new Date());
+  const [date, setDate] = useState<Date | null>(null);
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
   const [markedPresentToday, setMarkedPresentToday] = useState(new Set<string>());
 
-  const fetchStudentsAndAttendance = useCallback(async () => {
+  const fetchStudentsAndAttendance = useCallback(async (currentDate: Date) => {
     setLoading(true);
     try {
       const knownFacesData = await getKnownFaces();
-      const formattedDate = format(date, 'yyyy-MM-dd');
+      const formattedDate = format(currentDate, 'yyyy-MM-dd');
       
       const newMarkedPresent = new Set<string>();
       const studentsWithAttendance = await Promise.all(
@@ -48,9 +48,10 @@ export default function AttendancePage() {
     } finally {
       setLoading(false);
     }
-  }, [date]);
+  }, []);
 
   const handleMarkAttendance = useCallback(async (studentId: string, status: 'Present' | 'Absent' | 'Leave') => {
+    if (!date) return;
     const formattedDate = format(date, 'yyyy-MM-dd');
     try {
       await takeAttendance(studentId, formattedDate, status);
@@ -71,7 +72,10 @@ export default function AttendancePage() {
   }, [date, toast]);
   
   useEffect(() => {
-    fetchStudentsAndAttendance();
+    // Set date on client-side to avoid hydration mismatch
+    const today = new Date();
+    setDate(today);
+    fetchStudentsAndAttendance(today);
   }, [fetchStudentsAndAttendance]);
 
   
@@ -94,6 +98,16 @@ export default function AttendancePage() {
       });
     }
   };
+
+  if (!date) {
+    return (
+      <MainLayout title="Take Attendance">
+        <div className="flex justify-center items-center h-full">
+          <Loader2 className="h-8 w-8 animate-spin" />
+        </div>
+      </MainLayout>
+    );
+  }
 
   return (
     <MainLayout title="Take Attendance">
