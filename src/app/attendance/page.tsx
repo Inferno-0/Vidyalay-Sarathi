@@ -10,7 +10,7 @@ import MainLayout from '@/components/main-layout';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
-import FaceScanner from '@/components/face-scanner'; // Import the scanner
+import FaceScanner from '@/components/face-scanner';
 
 interface Student {
   label: string;
@@ -57,6 +57,9 @@ export default function AttendancePage() {
     try {
       await takeAttendance(studentId, formattedDate, status);
       
+      // We optimistically update the UI
+      setStudents(prev => prev.map(s => s.label === studentId ? { ...s, status } : s));
+      
       if (status === 'Present') {
         setMarkedPresentToday(prev => new Set(prev).add(studentId));
       } else {
@@ -66,14 +69,14 @@ export default function AttendancePage() {
           return newSet;
         });
       }
-      setStudents(prev => prev.map(s => s.label === studentId ? { ...s, status } : s));
     } catch (error) {
         toast({ variant: 'destructive', title: 'Error', description: `Failed to mark ${studentId} as ${status}.` });
+        // Re-fetch to revert optimistic update on error
+        fetchStudentsAndAttendance(date); 
     }
-  }, [date, toast]);
+  }, [date, toast, fetchStudentsAndAttendance]);
   
   useEffect(() => {
-    // Set date on client-side to avoid hydration mismatch
     const today = new Date();
     setDate(today);
     fetchStudentsAndAttendance(today);
@@ -91,12 +94,10 @@ export default function AttendancePage() {
   };
   
   const onFaceRecognized = (name: string) => {
-    // Check if we've already marked this person or are currently processing them
     if (markedPresentToday.has(name) || processingRef.current.has(name)) {
       return;
     }
     
-    // Add to processing set to prevent re-entry
     processingRef.current.add(name);
 
     handleMarkAttendance(name, 'Present');
@@ -105,10 +106,9 @@ export default function AttendancePage() {
       description: `${name} has been marked as Present.`,
     });
     
-    // After a short delay, remove from processing set
     setTimeout(() => {
       processingRef.current.delete(name);
-    }, 2000); // 2-second cooldown
+    }, 2000);
   };
 
   if (!date) {
@@ -151,7 +151,7 @@ export default function AttendancePage() {
                            <span className="font-medium text-lg">{student.label}</span>
                            <div className="flex items-center gap-2">
                                 {getStatusBadge(student.status)}
-                                {student.status !== 'Holiday' && (
+                                {student.status !== 'Holiday' && student.status !== 'Present' && (
                                   <>
                                     <Button size="sm" variant={student.status === 'Absent' ? "outline" : "destructive"} onClick={() => handleMarkAttendance(student.label, 'Absent')}><UserX className="h-4 w-4" /></Button>
                                     <Button size="sm" variant={student.status === 'Leave' ? "secondary" : "outline"} className="bg-blue-500 hover:bg-blue-600 text-white" onClick={() => handleMarkAttendance(student.label, 'Leave')}><Plane className="h-4 w-4" /></Button>

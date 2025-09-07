@@ -4,7 +4,9 @@
 import fs from 'fs/promises';
 import path from 'path';
 
-const dataFilePath = path.join(process.cwd(), 'data', 'faces.json');
+const facesDataPath = path.join(process.cwd(), 'data', 'faces.json');
+const attendanceDataPath = path.join(process.cwd(), 'data', 'attendance.json');
+
 
 interface KnownFace {
   label: string;
@@ -13,9 +15,8 @@ interface KnownFace {
   images: string[];
 }
 
-// MOCK DATA - In a real app, this would be a database call.
-// We keep this structure to allow the takeAttendance function to work without a real DB.
-const mockAttendance: Record<string, Record<string, 'Present' | 'Absent' | 'Leave' | 'Holiday'>> = {};
+type AttendanceStatus = 'Present' | 'Absent' | 'Leave' | 'Holiday' | 'Not Marked';
+type AttendanceLog = Record<string, Record<string, AttendanceStatus>>;
 
 
 // MOCK HOLIDAYS - In a real app, this would be a database call
@@ -24,22 +25,22 @@ const mockHolidays = [
     { date: "2025-10-02", name: "Gandhi Jayanti" },
 ];
 
-
-async function ensureDataFileExists() {
+async function ensureDataFileExists(filePath: string, defaultContent: string) {
   try {
-    await fs.access(dataFilePath);
+    await fs.access(filePath);
   } catch (error) {
-    await fs.mkdir(path.dirname(dataFilePath), { recursive: true });
-    await fs.writeFile(dataFilePath, JSON.stringify([]));
+    await fs.mkdir(path.dirname(filePath), { recursive: true });
+    await fs.writeFile(filePath, defaultContent);
   }
 }
 
+// ========== Face Management Functions ==========
+
 export async function getKnownFaces(): Promise<KnownFace[]> {
-  await ensureDataFileExists();
-  const fileContent = await fs.readFile(dataFilePath, 'utf-8');
+  await ensureDataFileExists(facesDataPath, '[]');
+  const fileContent = await fs.readFile(facesDataPath, 'utf-8');
   try {
-    const faces = JSON.parse(fileContent);
-    return faces;
+    return JSON.parse(fileContent);
   } catch {
     return [];
   }
@@ -50,14 +51,14 @@ export async function saveKnownFace(face: { label: string; class: string; rollNo
     const existingFace = faces.find(f => f.label === face.label);
 
     if (existingFace) {
-        existingFace.images.push(...face.images); // Add new images to existing ones
+        existingFace.images.push(...face.images);
         existingFace.class = face.class;
         existingFace.rollNo = face.rollNo;
     } else {
         faces.push({ label: face.label, class: face.class, rollNo: face.rollNo, images: face.images });
     }
     
-    await fs.writeFile(dataFilePath, JSON.stringify(faces, null, 2));
+    await fs.writeFile(facesDataPath, JSON.stringify(faces, null, 2));
 }
 
 export async function updateKnownFace(label: string, newData: { name: string; class: string; rollNo: string }): Promise<void> {
@@ -72,50 +73,53 @@ export async function updateKnownFace(label: string, newData: { name: string; cl
         throw new Error("Face not found");
     }
 
-    await fs.writeFile(dataFilePath, JSON.stringify(faces, null, 2));
+    await fs.writeFile(facesDataPath, JSON.stringify(faces, null, 2));
 }
-
 
 export async function deleteKnownFace(label: string): Promise<void> {
     let faces = await getKnownFaces();
     faces = faces.filter(f => f.label !== label);
-    await fs.writeFile(dataFilePath, JSON.stringify(faces, null, 2));
+    await fs.writeFile(facesDataPath, JSON.stringify(faces, null, 2));
 }
 
-export async function getAttendanceForStudent(studentId: string, date: string): Promise<'Present' | 'Absent' | 'Leave' | 'Holiday' | 'Not Marked'> {
+
+// ========== Attendance Management Functions ==========
+
+async function getAttendanceLog(): Promise<AttendanceLog> {
+    await ensureDataFileExists(attendanceDataPath, '{}');
+    const fileContent = await fs.readFile(attendanceDataPath, 'utf-8');
+    try {
+        return JSON.parse(fileContent);
+    } catch {
+        return {};
+    }
+}
+
+export async function getAttendanceForStudent(studentId: string, date: string): Promise<AttendanceStatus> {
   const sessionStartDate = new Date('2025-08-01');
   const today = new Date();
-  today.setHours(0, 0, 0, 0); // Normalize today's date
+  today.setHours(0, 0, 0, 0); 
   const currentDate = new Date(date);
   
-  // If the date is in the future, it's not marked yet
-  if (currentDate > today) {
-    return 'Not Marked';
-  }
-
-  // If before session start, attendance is not applicable
-  if (currentDate < sessionStartDate) {
-    return 'Not Marked';
-  }
+  if (currentDate > today) return 'Not Marked';
+  if (currentDate < sessionStartDate) return 'Not Marked';
   
-  // Check for holidays
-  if (currentDate.getDay() === 0) return 'Holiday'; // Sunday
+  if (currentDate.getDay() === 0) return 'Holiday'; 
   const isHoliday = mockHolidays.some(h => h.date === date);
   if (isHoliday) return 'Holiday';
 
-  // Check for marked attendance
-  const studentAttendance = mockAttendance[studentId];
+  const attendanceLog = await getAttendanceLog();
+  const studentAttendance = attendanceLog[studentId];
   if (studentAttendance && studentAttendance[date]) {
     return studentAttendance[date];
   }
   
-  // Default to Absent if after session start and not a holiday/leave/present
   return 'Absent';
 }
 
-export async function getAttendanceForDate(date: string): Promise<Record<string, 'Present' | 'Absent' | 'Leave' | 'Holiday' | 'Not Marked'>> {
+export async function getAttendanceForDate(date: string): Promise<Record<string, AttendanceStatus>> {
   const students = await getKnownFaces();
-  const attendanceData: Record<string, 'Present' | 'Absent' | 'Leave' | 'Holiday' | 'Not Marked'> = {};
+  const attendanceData: Record<string, AttendanceStatus> = {};
 
   for (const student of students) {
     attendanceData[student.label] = await getAttendanceForStudent(student.label, date);
@@ -124,17 +128,13 @@ export async function getAttendanceForDate(date: string): Promise<Record<string,
   return attendanceData;
 }
 
-
 export async function takeAttendance(studentId: string, date: string, status: 'Present' | 'Absent' | 'Leave'): Promise<void> {
-  // This is a mock function. In a real app, you'd write to Firestore.
-  // Example: db.collection('attendance').add({ studentId, date, status, day: new Date(date).toLocaleString('en-us', { weekday: 'long' }) })
-  console.log(`Marking ${studentId} as ${status} for ${date}`);
+  const attendanceLog = await getAttendanceLog();
   
-  if (!mockAttendance[studentId]) {
-    mockAttendance[studentId] = {};
+  if (!attendanceLog[studentId]) {
+    attendanceLog[studentId] = {};
   }
-  mockAttendance[studentId][date] = status;
-  
-  // This is just to demonstrate it works without a real DB.
-  // In a real app, this server action would just update Firestore.
+  attendanceLog[studentId][date] = status;
+
+  await fs.writeFile(attendanceDataPath, JSON.stringify(attendanceLog, null, 2));
 }
