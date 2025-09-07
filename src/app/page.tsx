@@ -37,7 +37,7 @@ export default function Home() {
               <CardTitle className="text-2xl font-bold">Add New Student</CardTitle>
               <CardDescription className="mt-2 text-muted-foreground">
                 Enroll a new face into the recognition system.
-              </card-Description>
+              </CardDescription>
             </CardHeader>
           </Card>
         </Link>
@@ -61,7 +61,7 @@ export default function Home() {
               <CardTitle className="text-2xl font-bold">Attendance Register</CardTitle>
               <CardDescription className="mt-2 text-muted-foreground">
                 View and manage historical attendance records.
-              </cardDescription>
+              </CardDescription>
             </CardHeader>
           </Card>
         </Link>
