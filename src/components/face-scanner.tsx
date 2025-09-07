@@ -70,6 +70,12 @@ const FaceScanner: React.FC<FaceScannerProps> = ({ mode = 'enrollment', onFaceRe
         setLoadingMessage('Loading known faces...');
         const savedFaces: KnownFaceData[] = await getKnownFaces();
 
+        if (savedFaces.length === 0) {
+            setFaceMatcher(null);
+            setLoadingMessage('');
+            return;
+        }
+
         const labeledFaceDescriptors = await Promise.all(
             savedFaces.map(async (face: KnownFaceData) => {
                 const descriptors: any[] = [];
@@ -102,7 +108,7 @@ const FaceScanner: React.FC<FaceScannerProps> = ({ mode = 'enrollment', onFaceRe
         
         const validDescriptors = labeledFaceDescriptors.filter(d => d !== null);
         if (validDescriptors.length > 0) {
-          setFaceMatcher(new faceapi.FaceMatcher(validDescriptors, 0.4));
+          setFaceMatcher(new faceapi.FaceMatcher(validDescriptors, 0.5));
         } else {
           setFaceMatcher(null);
         }
@@ -114,39 +120,48 @@ const FaceScanner: React.FC<FaceScannerProps> = ({ mode = 'enrollment', onFaceRe
     }
   }, []);
   
+  const startVideo = useCallback(async () => {
+    if (videoRef.current && videoRef.current.srcObject) {
+      (videoRef.current.srcObject as MediaStream).getTracks().forEach(track => track.stop());
+      videoRef.current.srcObject = null;
+    }
+    
+    try {
+      setLoadingMessage('Accessing camera...');
+      setIsReady(false);
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        video: { 
+          facingMode: facingMode 
+        } 
+      });
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        setHasCameraPermission(true);
+      }
+      return stream;
+    } catch (err) {
+      console.error('Error accessing camera:', err);
+      setLoadingMessage(`Camera access denied. Please enable permissions.`);
+      setHasCameraPermission(false);
+      toast({
+        variant: 'destructive',
+        title: 'Camera Access Denied',
+        description: 'Could not access the camera. Please check your browser permissions.',
+      });
+      return null;
+    }
+  }, [facingMode, toast]);
+
   useEffect(() => {
     let stream: MediaStream | null = null;
-  
-    const startVideo = async () => {
-      if (videoRef.current && videoRef.current.srcObject) {
-        (videoRef.current.srcObject as MediaStream).getTracks().forEach(track => track.stop());
-      }
-      
-      try {
-        setLoadingMessage('Accessing camera...');
-        setIsReady(false);
-        stream = await navigator.mediaDevices.getUserMedia({ 
-          video: { 
-            facingMode: facingMode 
-          } 
-        });
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-          setHasCameraPermission(true);
+    const init = async () => {
+        const modelsLoaded = await loadModels();
+        if (modelsLoaded) {
+            await loadKnownFaces();
+            stream = await startVideo();
         }
-      } catch (err) {
-        console.error('Error accessing camera:', err);
-        setLoadingMessage(`Camera access denied. Please enable permissions.`);
-        setHasCameraPermission(false);
-        toast({
-          variant: 'destructive',
-          title: 'Camera Access Denied',
-          description: 'Could not access the camera. Please check your browser permissions.',
-        });
-      }
     };
-  
-    startVideo();
+    init();
   
     return () => {
       if (stream) {
@@ -156,17 +171,7 @@ const FaceScanner: React.FC<FaceScannerProps> = ({ mode = 'enrollment', onFaceRe
         clearInterval(detectionInterval.current);
       }
     }
-  }, [facingMode, toast]);
-
-  useEffect(() => {
-      const init = async () => {
-          const modelsLoaded = await loadModels();
-          if (modelsLoaded) {
-              await loadKnownFaces();
-          }
-      };
-      init();
-  }, [loadModels, loadKnownFaces]);
+  }, [loadModels, loadKnownFaces, startVideo]);
   
 
   const handlePlay = useCallback(() => {
@@ -180,7 +185,7 @@ const FaceScanner: React.FC<FaceScannerProps> = ({ mode = 'enrollment', onFaceRe
     const detectionOptions = new faceapi.SsdMobilenetv1Options({ minConfidence: 0.5 });
 
     detectionInterval.current = setInterval(async () => {
-      if (!videoRef.current || videoRef.current.paused || videoRef.current.ended || typeof faceapi === 'undefined' || isDialogOpen || !faceMatcher) {
+      if (!videoRef.current || videoRef.current.paused || videoRef.current.ended || typeof faceapi === 'undefined' || isDialogOpen) {
         return;
       }
       
@@ -203,33 +208,35 @@ const FaceScanner: React.FC<FaceScannerProps> = ({ mode = 'enrollment', onFaceRe
       
       let foundUnknownFace = false;
 
-      if (faceMatcher && resizedDetections.length > 0) {
-        resizedDetections.forEach((detection: any) => {
-          const { descriptor, detection: det } = detection;
-          const bestMatch = faceMatcher.findBestMatch(descriptor);
-          const box = det.box;
-          const drawBox = new faceapi.draw.DrawBox(box, { 
-            label: bestMatch.toString(),
-            boxColor: bestMatch.label !== 'unknown' ? '#2ECC71' : '#E74C3C',
-          });
-          drawBox.draw(canvas);
-
-          if (bestMatch.label === 'unknown') {
-            foundUnknownFace = true;
-          } else if (mode === 'attendance' && onFaceRecognized) {
-            onFaceRecognized(bestMatch.label);
-          }
-        });
-      } else if (resizedDetections.length > 0) {
-        foundUnknownFace = true;
-        resizedDetections.forEach((detection: any) => {
-            const box = detection.detection.box;
+      if (resizedDetections.length > 0) {
+        if (faceMatcher) {
+          resizedDetections.forEach((detection: any) => {
+            const { descriptor, detection: det } = detection;
+            const bestMatch = faceMatcher.findBestMatch(descriptor);
+            const box = det.box;
             const drawBox = new faceapi.draw.DrawBox(box, { 
-              label: 'unknown',
-              boxColor: '#E74C3C',
+              label: bestMatch.toString(),
+              boxColor: bestMatch.label !== 'unknown' ? '#2ECC71' : '#E74C3C',
             });
             drawBox.draw(canvas);
+            
+            if (bestMatch.label === 'unknown') {
+              foundUnknownFace = true;
+            } else if (mode === 'attendance' && onFaceRecognized) {
+              onFaceRecognized(bestMatch.label);
+            }
           });
+        } else {
+            foundUnknownFace = true;
+            resizedDetections.forEach((detection: any) => {
+                const box = detection.detection.box;
+                const drawBox = new faceapi.draw.DrawBox(box, { 
+                  label: 'unknown',
+                  boxColor: '#E74C3C',
+                });
+                drawBox.draw(canvas);
+            });
+        }
       }
       setUnknownFaceDetected(foundUnknownFace);
     }, 1500);
