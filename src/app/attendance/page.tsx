@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { getKnownFaces, getAttendanceForStudent, takeAttendance } from '@/app/actions';
@@ -24,6 +24,7 @@ export default function AttendancePage() {
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
   const [markedPresentToday, setMarkedPresentToday] = useState(new Set<string>());
+  const processingRef = useRef(new Set<string>());
 
   const fetchStudentsAndAttendance = useCallback(async (currentDate: Date) => {
     setLoading(true);
@@ -90,13 +91,24 @@ export default function AttendancePage() {
   };
   
   const onFaceRecognized = (name: string) => {
-    if (!markedPresentToday.has(name)) {
-      handleMarkAttendance(name, 'Present');
-      toast({
-        title: 'Attendance Marked',
-        description: `${name} has been marked as Present.`,
-      });
+    // Check if we've already marked this person or are currently processing them
+    if (markedPresentToday.has(name) || processingRef.current.has(name)) {
+      return;
     }
+    
+    // Add to processing set to prevent re-entry
+    processingRef.current.add(name);
+
+    handleMarkAttendance(name, 'Present');
+    toast({
+      title: 'Attendance Marked',
+      description: `${name} has been marked as Present.`,
+    });
+    
+    // After a short delay, remove from processing set
+    setTimeout(() => {
+      processingRef.current.delete(name);
+    }, 2000); // 2-second cooldown
   };
 
   if (!date) {

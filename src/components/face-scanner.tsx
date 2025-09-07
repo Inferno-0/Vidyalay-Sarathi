@@ -219,44 +219,52 @@ const FaceScanner: React.FC<FaceScannerProps> = ({ mode = 'enrollment', onFaceRe
         const resizedDetections = faceapi.resizeResults(detection, displaySize);
         
         let label = 'Unknown';
-        let boxColor = '#3498DB'; // Blue for new face
+        let boxColor = '#E74C3C'; // Red for unknown
         
         if (faceMatcher) {
             const bestMatch = faceMatcher.findBestMatch(resizedDetections.descriptor);
             if (bestMatch.label !== 'unknown') {
                 label = bestMatch.label;
-                boxColor = '#2ECC71'; // Green for known
-                if (mode === 'enrollment') {
-                   setAlreadyEnrolledMessage(`${label} is already enrolled.`);
-                }
-            } else {
-                 setAlreadyEnrolledMessage(null);
+                // Default to blue for known, change to green if marked present
+                boxColor = '#3498DB'; 
             }
         }
         
-        const isMarked = recognizedLabels.has(label);
+        const isMarkedPresent = recognizedLabels.has(label);
+
         if (mode === 'attendance') {
-            if (label !== 'Unknown' && isMarked) {
-                const drawBox = new faceapi.draw.DrawBox(resizedDetections.detection.box, { label: `${label} (Present)`, boxColor: '#2ECC71' });
-                drawBox.draw(canvas);
-            } else if (label !== 'Unknown' && onFaceRecognized) {
-                const drawBox = new faceapi.draw.DrawBox(resizedDetections.detection.box, { label, boxColor: '#3498DB' });
-                drawBox.draw(canvas);
-                onFaceRecognized(label);
+            if (label !== 'Unknown') {
+                if (isMarkedPresent) {
+                    boxColor = '#2ECC71'; // Green
+                    const drawBox = new faceapi.draw.DrawBox(resizedDetections.detection.box, { label: `${label} (Present)`, boxColor });
+                    drawBox.draw(canvas);
+                } else {
+                    boxColor = '#3498DB'; // Blue
+                    const drawBox = new faceapi.draw.DrawBox(resizedDetections.detection.box, { label, boxColor });
+                    drawBox.draw(canvas);
+                    if (onFaceRecognized) {
+                        onFaceRecognized(label);
+                    }
+                }
             } else {
-                const drawBox = new faceapi.draw.DrawBox(resizedDetections.detection.box, { label: 'Unknown', boxColor: '#E74C3C' });
-                drawBox.draw(canvas);
+                 const drawBox = new faceapi.draw.DrawBox(resizedDetections.detection.box, { label: 'Unknown', boxColor });
+                 drawBox.draw(canvas);
             }
         } else { // Enrollment mode
+             if (label !== 'Unknown') {
+                 boxColor = '#2ECC71'; // Green for already enrolled
+                 setAlreadyEnrolledMessage(`${label} is already enrolled.`);
+             } else {
+                 boxColor = '#3498DB'; // Blue for new face
+                 setAlreadyEnrolledMessage(null);
+             }
              const drawBox = new faceapi.draw.DrawBox(resizedDetections.detection.box, { label, boxColor });
              drawBox.draw(canvas);
         }
         
       } else {
         setIsFaceDetected(false);
-        if (mode === 'enrollment') {
-            setAlreadyEnrolledMessage(null);
-        }
+        setAlreadyEnrolledMessage(null);
       }
     }, 500);
 
@@ -306,7 +314,7 @@ const FaceScanner: React.FC<FaceScannerProps> = ({ mode = 'enrollment', onFaceRe
   const renderEnrollmentControls = () => (
     <div className="w-full md:w-1/3 flex flex-col items-center justify-center gap-4 p-4">
         <p className="text-center text-muted-foreground">
-            Position your face in the center of the frame and click the capture button.
+            Position a new face in the frame and click capture.
         </p>
         <Button 
             onClick={handleCaptureFace} 
