@@ -7,7 +7,13 @@ import { CalendarCheck, Users, UserPlus, BookUser } from 'lucide-react';
 
 export default function Home() {
   return (
-    <div className="flex flex-col items-center justify-center flex-1">
+    <div className="relative flex flex-col items-center justify-center flex-1 overflow-hidden">
+
+      {/* Decorative Circles */}
+      <div className="absolute top-[-20%] left-[-20%] w-96 h-96 bg-primary/5 rounded-full filter blur-3xl opacity-50 animate-pulse"></div>
+      <div className="absolute bottom-[-20%] right-[-20%] w-96 h-96 bg-primary/5 rounded-full filter blur-3xl opacity-50 animate-pulse delay-2000"></div>
+
+
       <div className="relative z-10 text-center mb-12">
         <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight mb-2 text-primary">
           Vidyalay Sarathi
@@ -19,7 +25,7 @@ export default function Home() {
 
       <div className="relative z-10 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-8 w-full max-w-6xl">
         <Link href="/attendance" passHref>
-          <Card className="group transform transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-primary/20 cursor-pointer bg-card border">
+          <Card className="group transform transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-primary/20 cursor-pointer bg-card border-primary/20">
             <CardHeader className="flex flex-col items-center justify-center p-8 text-center">
               <CalendarCheck className="w-16 h-16 mb-4 text-primary transition-transform duration-300 group-hover:scale-110" />
               <CardTitle className="text-2xl font-bold">Take Attendance</CardTitle>
@@ -31,7 +37,7 @@ export default function Home() {
         </Link>
         
         <Link href="/scanner" passHref>
-          <Card className="group transform transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-primary/20 cursor-pointer bg-card border">
+          <Card className="group transform transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-primary/20 cursor-pointer bg-card border-primary/20">
             <CardHeader className="flex flex-col items-center justify-center p-8 text-center">
               <UserPlus className="w-16 h-16 mb-4 text-primary transition-transform duration-300 group-hover:scale-110" />
               <CardTitle className="text-2xl font-bold">Add New Student</CardTitle>
@@ -43,7 +49,7 @@ export default function Home() {
         </Link>
 
         <Link href="/known-faces" passHref>
-          <Card className="group transform transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-primary/20 cursor-pointer bg-card border">
+          <Card className="group transform transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-primary/20 cursor-pointer bg-card border-primary/20">
             <CardHeader className="flex flex-col items-center justify-center p-8 text-center">
               <Users className="w-16 h-16 mb-4 text-primary transition-transform duration-300 group-hover:scale-110" />
               <CardTitle className="text-2xl font-bold">Known Faces</CardTitle>
@@ -55,7 +61,7 @@ export default function Home() {
         </Link>
 
         <Link href="/attendance-history" passHref>
-          <Card className="group transform transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-primary/20 cursor-pointer bg-card border">
+          <Card className="group transform transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-primary/20 cursor-pointer bg-card border-primary/20">
             <CardHeader className="flex flex-col items-center justify-center p-8 text-center">
               <BookUser className="w-16 h-16 mb-4 text-primary transition-transform duration-300 group-hover:scale-110" />
               <CardTitle className="text-2xl font-bold">Attendance Register</CardTitle>
