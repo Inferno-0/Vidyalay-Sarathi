@@ -89,7 +89,7 @@ async function getAttendanceLog(): Promise<AttendanceLog> {
     await ensureDataFileExists(attendanceDataPath, '{}');
     const fileContent = await fs.readFile(attendanceDataPath, 'utf-8');
     try {
-        return JSON.parse(fileContent);
+        return JSON.parse(fileContent) || {};
     } catch {
         return {};
     }
@@ -102,26 +102,29 @@ export async function getAttendanceForStudent(studentId: string, date: string): 
   const currentDate = new Date(date);
   currentDate.setHours(0,0,0,0);
   
-  if (currentDate > today) return 'Not Marked';
   if (currentDate < sessionStartDate) return 'Not Marked';
-  
-  if (currentDate.getDay() === 0) return 'Holiday'; 
+
+  // Check for holidays and weekends first
+  if (currentDate.getDay() === 0) return 'Holiday'; // Sunday
   const isHoliday = mockHolidays.some(h => h.date === date);
   if (isHoliday) return 'Holiday';
-
+  
+  // Check the actual log
   const attendanceLog = await getAttendanceLog();
   const studentAttendance = attendanceLog[studentId];
-  
   if (studentAttendance && studentAttendance[date]) {
     return studentAttendance[date];
   }
-  
-  // If today is the date being checked, and no record exists, they are absent.
-  // Otherwise, it's just not marked yet.
-  if(currentDate.getTime() < today.getTime()) return 'Absent';
 
+  // If we are here, no record exists for this student on this date.
+  // Now, determine the default status based on the date.
+  if (currentDate > today) return 'Not Marked'; // Future dates
+  if (currentDate <= today) return 'Absent'; // Past or current date with no record
+
+  // This part should ideally not be reached, but as a fallback:
   return 'Not Marked';
 }
+
 
 export async function getAttendanceForDate(date: string): Promise<Record<string, AttendanceStatus>> {
   const students = await getKnownFaces();
