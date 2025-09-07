@@ -44,7 +44,7 @@ const nextConfig: NextConfig = {
         headers: [
           {
             key: 'Content-Security-Policy',
-            value: "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://cdn.jsdelivr.net; media-src 'self' https://cdn.jsdelivr.net;",
+            value: "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://cdn.jsdelivr.net; media-src 'self' https://cdn.jsdelivr.net; img-src 'self' data: https://storage.googleapis.com https://picsum.photos;",
           },
         ],
       },
