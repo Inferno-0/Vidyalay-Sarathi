@@ -18,7 +18,7 @@ const navLinks = [
   { href: '/scanner', label: 'Add New Student', icon: UserPlus },
   { href: '/known-faces', label: 'Known Faces', icon: Users },
   { href: '/attendance', label: 'Take Attendance', icon: CalendarCheck },
-  { href: '/attendance-history', label: 'Attendance History', icon: BookUser },
+  { href: '/attendance-history', label: 'Attendance Register', icon: BookUser },
 ];
 
 export default function MainLayout({ children, title }: MainLayoutProps) {
@@ -30,7 +30,7 @@ export default function MainLayout({ children, title }: MainLayoutProps) {
         <div className="container flex h-14 max-w-4xl items-center">
           <Sheet>
             <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" className="mr-2">
+              <Button variant="ghost" size="icon" className="mr-2 md:hidden">
                 <Menu className="h-6 w-6" />
                 <span className="sr-only">Toggle Menu</span>
               </Button>

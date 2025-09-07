@@ -20,7 +20,7 @@ interface AttendanceRecord {
   status: 'Present' | 'Absent' | 'Leave' | 'Holiday' | 'Not Marked';
 }
 
-export default function AttendanceHistoryPage() {
+export default function AttendanceRegisterPage() {
   const [date, setDate] = useState<Date>(new Date());
   const [students, setStudents] = useState<Student[]>([]);
   const [attendance, setAttendance] = useState<Record<string, AttendanceRecord['status']>>({});
@@ -67,7 +67,7 @@ export default function AttendanceHistoryPage() {
   };
 
   return (
-    <MainLayout title="Attendance History">
+    <MainLayout title="Attendance Register">
       <div className="w-full grid grid-cols-1 md:grid-cols-3 gap-8">
         <div className="md:col-span-1">
           <Card>
@@ -80,6 +80,7 @@ export default function AttendanceHistoryPage() {
                 selected={date}
                 onSelect={(newDate) => newDate && setDate(newDate)}
                 className="rounded-md border"
+                disabled={(day) => day > new Date() || day < new Date("2000-01-01")}
               />
             </CardContent>
           </Card>
@@ -94,6 +95,8 @@ export default function AttendanceHistoryPage() {
                 <CardContent className="space-y-2 max-h-[60vh] overflow-y-auto">
                   {loading ? (
                      <div className="text-center py-8"><Loader2 className="h-8 w-8 animate-spin mx-auto" /></div>
+                  ) : students.length === 0 ? (
+                    <p className="text-muted-foreground text-center py-8">No students enrolled yet.</p>
                   ) : (
                     students.map(student => (
                         <div key={student.label} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">

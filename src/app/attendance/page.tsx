@@ -5,7 +5,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { getKnownFaces, getAttendanceForStudent, takeAttendance } from '@/app/actions';
-import { Loader2, UserX, Plane } from 'lucide-react';
+import { Loader2, UserX, Plane, SwitchCamera } from 'lucide-react';
 import MainLayout from '@/components/main-layout';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
@@ -33,8 +33,8 @@ export default function AttendancePage() {
   const [knownFaces, setKnownFaces] = useState<any[]>([]);
   const markedPresentToday = useRef(new Set<string>());
   const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
+  const [facingMode, setFacingMode] = useState<'user' | 'environment'>('user');
 
-  // Load models and known faces
   const setupFaceScanner = useCallback(async () => {
     if (typeof faceapi === 'undefined') {
         setTimeout(setupFaceScanner, 500);
@@ -47,6 +47,10 @@ export default function AttendancePage() {
     ]);
 
     const savedFaces = await getKnownFaces();
+    if (savedFaces.length === 0) {
+        setIsScannerReady(true);
+        return;
+    }
     const labeledFaceDescriptors = await Promise.all(
         savedFaces.map(async (face) => {
             const descriptors: any[] = [];
@@ -66,8 +70,16 @@ export default function AttendancePage() {
   }, []);
 
   const startVideo = useCallback(async () => {
+    if (videoRef.current && videoRef.current.srcObject) {
+      const stream = videoRef.current.srcObject as MediaStream;
+      stream.getTracks().forEach(track => track.stop());
+      videoRef.current.srcObject = null;
+    }
+
+    await new Promise(resolve => setTimeout(resolve, 100));
+
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: {} });
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode } });
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         setHasCameraPermission(true);
@@ -77,7 +89,7 @@ export default function AttendancePage() {
       setHasCameraPermission(false);
       toast({ variant: 'destructive', title: 'Camera Error', description: 'Could not access the camera. Please check permissions.' });
     }
-  }, [toast]);
+  }, [facingMode, toast]);
   
   const fetchStudentsAndAttendance = useCallback(async () => {
     setLoading(true);
@@ -102,24 +114,15 @@ export default function AttendancePage() {
     }
   }, [date]);
 
-  useEffect(() => {
-    fetchStudentsAndAttendance();
-    setupFaceScanner();
-
-    return () => {
-        if (detectionInterval.current) clearInterval(detectionInterval.current);
-        if (videoRef.current?.srcObject) {
-            const stream = videoRef.current.srcObject as MediaStream;
-            stream.getTracks().forEach(track => track.stop());
-        }
-    };
-  }, [fetchStudentsAndAttendance, setupFaceScanner]);
-
-  const handleMarkAttendance = async (studentId: string, status: 'Present' | 'Absent' | 'Leave') => {
+  const handleMarkAttendance = useCallback(async (studentId: string, status: 'Present' | 'Absent' | 'Leave') => {
     const formattedDate = format(date, 'yyyy-MM-dd');
-    await takeAttendance(studentId, formattedDate, status);
-    setStudents(prev => prev.map(s => s.label === studentId ? { ...s, status } : s));
-  };
+    try {
+      await takeAttendance(studentId, formattedDate, status);
+      setStudents(prev => prev.map(s => s.label === studentId ? { ...s, status } : s));
+    } catch (error) {
+        toast({ variant: 'destructive', title: 'Error', description: `Failed to mark ${studentId} as ${status}.` });
+    }
+  }, [date, toast]);
   
   const handlePlay = useCallback(() => {
     if (detectionInterval.current) clearInterval(detectionInterval.current);
@@ -146,13 +149,31 @@ export default function AttendancePage() {
             }
         }
     }, 2000);
-  }, [knownFaces, toast]);
+  }, [knownFaces, toast, handleMarkAttendance]);
+
+  useEffect(() => {
+    fetchStudentsAndAttendance();
+    setupFaceScanner();
+
+    return () => {
+        if (detectionInterval.current) clearInterval(detectionInterval.current);
+        if (videoRef.current?.srcObject) {
+            const stream = videoRef.current.srcObject as MediaStream;
+            stream.getTracks().forEach(track => track.stop());
+        }
+    };
+  }, [fetchStudentsAndAttendance, setupFaceScanner]);
+
 
   useEffect(() => {
     if (isScannerReady) {
         startVideo();
     }
   }, [isScannerReady, startVideo]);
+
+  const toggleCamera = () => {
+    setFacingMode(prev => prev === 'user' ? 'environment' : 'user');
+  };
   
   const getStatusBadge = (status: Student['status']) => {
     switch (status) {
@@ -188,7 +209,10 @@ export default function AttendancePage() {
                       </AlertDescription>
                     </Alert>
                 ) : (
-                    <video ref={videoRef} autoPlay muted playsInline onPlay={handlePlay} className="w-full h-full object-cover transform scale-x-[-1]" />
+                   <>
+                    <video ref={videoRef} autoPlay muted playsInline onPlay={handlePlay} className={`w-full h-full object-cover ${facingMode === 'user' ? 'transform scale-x-[-1]' : ''}`} />
+                    <Button onClick={toggleCamera} variant="outline" size="icon" className="absolute top-2 right-2 z-10"><SwitchCamera/></Button>
+                   </>
                 )}
               </div>
             </CardContent>

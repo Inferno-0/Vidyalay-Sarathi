@@ -1,21 +1,21 @@
 
 import Link from 'next/link';
 import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { CalendarCheck, Users, UserPlus } from 'lucide-react';
+import { CalendarCheck, Users, UserPlus, BookUser } from 'lucide-react';
 
 export default function Home() {
   return (
     <main className="flex flex-col items-center justify-center min-h-screen p-4 bg-background">
       <div className="text-center mb-12">
         <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight mb-2 bg-clip-text text-transparent bg-gradient-to-r from-primary to-accent">
-          AI Attendance Tracker
+          Vidyalay Sarathi
         </h1>
         <p className="text-md md:text-lg text-muted-foreground max-w-md mx-auto">
           Streamline your attendance process with smart face recognition.
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 w-full max-w-6xl">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-8 w-full max-w-6xl">
         <Link href="/attendance" passHref>
           <Card className="group transform transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-primary/20 cursor-pointer">
             <CardHeader className="flex flex-col items-center justify-center p-8 text-center">
@@ -47,6 +47,18 @@ export default function Home() {
               <CardTitle className="text-2xl font-bold">Known Faces</CardTitle>
               <CardDescription className="mt-2 text-muted-foreground">
                 View and manage the list of recognized individuals.
+              </CardDescription>
+            </CardHeader>
+          </Card>
+        </Link>
+
+        <Link href="/attendance-history" passHref>
+          <Card className="group transform transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-orange-500/20 cursor-pointer">
+            <CardHeader className="flex flex-col items-center justify-center p-8 text-center">
+              <BookUser className="w-16 h-16 mb-4 text-orange-500 transition-transform duration-300 group-hover:scale-110" />
+              <CardTitle className="text-2xl font-bold">Attendance Register</CardTitle>
+              <CardDescription className="mt-2 text-muted-foreground">
+                View and manage historical attendance records.
               </CardDescription>
             </CardHeader>
           </Card>
