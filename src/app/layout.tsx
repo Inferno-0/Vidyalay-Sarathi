@@ -37,6 +37,11 @@ export default function RootLayout({
                             <source src="https://cdn.jsdelivr.net/gh/firebase/genkit/site/docs/assets/solutions/vidyalay-sarathi/teacher_takes_attendance_phone.mp4" type="video/mp4" />
                         </video>
                     </CarouselItem>
+                    <CarouselItem>
+                        <video className="w-full h-full object-cover" autoPlay loop muted playsInline>
+                            <source src="https://cdn.jsdelivr.net/gh/firebase/genkit/site/docs/assets/solutions/vidyalay-sarathi/teacher_with_students.mp4" type="video/mp4" />
+                        </video>
+                    </CarouselItem>
                     </CarouselContent>
                 </Carousel>
                 <div className="absolute inset-0 bg-background/80 backdrop-blur-sm"></div>
