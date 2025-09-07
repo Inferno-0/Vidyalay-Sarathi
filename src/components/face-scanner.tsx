@@ -50,8 +50,6 @@ const getPose = (landmarks: any): Pose => {
     const rightEye = landmarks.getRightEye()[3];
     const jawOutline = landmarks.getJawOutline();
     const chin = jawOutline[8];
-    const leftJaw = jawOutline[0];
-    const rightJaw = jawOutline[16];
 
     const eyeMidPoint = { x: (leftEye.x + rightEye.x) / 2, y: (leftEye.y + rightEye.y) / 2 };
     const eyeDist = Math.sqrt(Math.pow(rightEye.x - leftEye.x, 2) + Math.pow(rightEye.y - leftEye.y, 2));
@@ -59,22 +57,21 @@ const getPose = (landmarks: any): Pose => {
     const noseToMidEyeX = nose.x - eyeMidPoint.x;
     const yawRatio = noseToMidEyeX / eyeDist;
 
-    const noseToMidEyeY = nose.y - eyeMidPoint.y;
-    // A simplified pitch estimation. More robust methods might use 3D model fitting.
+    // A simplified pitch estimation.
     const pitchRatio = (chin.y - nose.y) / eyeDist;
 
-    // Yaw detection
+    // Yaw detection (left/right turns)
     if (yawRatio < -0.35) return 'right';
     if (yawRatio > 0.35) return 'left';
     if (yawRatio < -0.15) return 'jaw_right';
     if (yawRatio > 0.15) return 'jaw_left';
 
-    // Pitch detection
-    if (pitchRatio > 1.2) return 'down'; // User looking down
-    if (pitchRatio < 0.8) return 'up'; // User looking up
+    // Pitch detection (up/down tilts)
+    if (pitchRatio > 1.25) return 'down'; 
+    if (pitchRatio < 0.95) return 'up';
 
     // If no extreme pose detected, assume front
-    if (Math.abs(yawRatio) < 0.15 && pitchRatio > 0.8 && pitchRatio < 1.2) return 'front';
+    if (Math.abs(yawRatio) < 0.15 && pitchRatio > 0.95 && pitchRatio < 1.25) return 'front';
 
     return 'unknown';
 };
@@ -234,12 +231,13 @@ const FaceScanner: React.FC<FaceScannerProps> = ({ mode = 'enrollment', onFaceRe
         context.drawImage(video, 0, 0, canvas.width, canvas.height);
         const dataUrl = canvas.toDataURL('image/jpeg');
         
-        setCapturedImages(prevImages => [...prevImages, dataUrl]);
+        setCapturedImages(prevImages => {
+            const newImages = [...prevImages, dataUrl];
+             // Using useEffect to handle dialog opening based on newImages.length
+            return newImages;
+        });
         
-        // Reset timers and advance step, only if we are not done yet
-        if (capturedImages.length + 1 < enrollmentSteps.length) {
-            setEnrollmentStep(prev => prev + 1);
-        }
+        setEnrollmentStep(prev => prev + 1);
         poseHeldSince.current = null;
         setCaptureCountdown(null);
       }
@@ -247,7 +245,7 @@ const FaceScanner: React.FC<FaceScannerProps> = ({ mode = 'enrollment', onFaceRe
   }, [capturedImages.length, facingMode]);
 
   useEffect(() => {
-    if (capturedImages.length === enrollmentSteps.length && mode === 'enrollment' && !isDialogOpen) {
+    if (mode === 'enrollment' && capturedImages.length === enrollmentSteps.length && !isDialogOpen) {
       setIsDialogOpen(true);
     }
   }, [capturedImages, mode, isDialogOpen]);
@@ -261,7 +259,7 @@ const FaceScanner: React.FC<FaceScannerProps> = ({ mode = 'enrollment', onFaceRe
     const detectionOptions = new faceapi.SsdMobilenetv1Options({ minConfidence: 0.5 });
 
     detectionInterval.current = setInterval(async () => {
-      if (!videoRef.current || videoRef.current.paused || videoRef.current.ended || typeof faceapi === 'undefined' || capturedImages.length >= enrollmentSteps.length) {
+      if (!videoRef.current || videoRef.current.paused || videoRef.current.ended || typeof faceapi === 'undefined' || (mode === 'enrollment' && capturedImages.length >= enrollmentSteps.length)) {
         return;
       }
       
@@ -345,7 +343,9 @@ const FaceScanner: React.FC<FaceScannerProps> = ({ mode = 'enrollment', onFaceRe
         
       } else {
         setCurrentPose('unknown');
-        setAlreadyEnrolledMessage(null);
+        if (mode === 'enrollment') {
+            setAlreadyEnrolledMessage(null);
+        }
         poseHeldSince.current = null;
         setCaptureCountdown(null);
       }
@@ -396,7 +396,7 @@ const FaceScanner: React.FC<FaceScannerProps> = ({ mode = 'enrollment', onFaceRe
   }, []);
 
   const progress = (capturedImages.length / enrollmentSteps.length) * 100;
-  const isPoseCorrect = enrollmentStep < enrollmentSteps.length && currentPose === enrollmentSteps[enrollmentStep].requiredPose;
+  const isPoseCorrect = mode === 'enrollment' && enrollmentStep < enrollmentSteps.length && currentPose === enrollmentSteps[enrollmentStep].requiredPose;
 
   const getPoseFeedback = () => {
     if (alreadyEnrolledMessage) return { text: "Already registered.", color: "text-yellow-600" };
