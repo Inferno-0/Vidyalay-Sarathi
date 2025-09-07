@@ -51,10 +51,11 @@ const FaceScanner: React.FC<FaceScannerProps> = ({ mode = 'enrollment', onFaceRe
     setLoadingMessage('Loading face detection models...');
     try {
         await Promise.all([
-          faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
+          faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL),
           faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
           faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL),
           faceapi.nets.faceExpressionNet.loadFromUri(MODEL_URL),
+          faceapi.nets.ageGenderNet.loadFromUri(MODEL_URL),
         ]);
         return true;
     } catch (error) {
@@ -85,7 +86,7 @@ const FaceScanner: React.FC<FaceScannerProps> = ({ mode = 'enrollment', onFaceRe
                     }
                     try {
                         const img = await faceapi.fetchImage(image);
-                        const detection = await faceapi.detectSingleFace(img, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceDescriptor();
+                        const detection = await faceapi.detectSingleFace(img, new faceapi.SsdMobilenetv1Options({ minConfidence: 0.4 })).withFaceLandmarks().withFaceDescriptor();
                         if (detection) {
                             descriptors.push(detection.descriptor);
                         }
@@ -107,16 +108,6 @@ const FaceScanner: React.FC<FaceScannerProps> = ({ mode = 'enrollment', onFaceRe
         setLoadingMessage('Could not load known faces.');
     }
   }, []);
-
-  useEffect(() => {
-      const init = async () => {
-          const modelsLoaded = await loadModels();
-          if (modelsLoaded) {
-              await loadKnownFaces();
-          }
-      };
-      init();
-  }, [loadModels, loadKnownFaces]);
   
   useEffect(() => {
     let stream: MediaStream | null = null;
@@ -163,6 +154,17 @@ const FaceScanner: React.FC<FaceScannerProps> = ({ mode = 'enrollment', onFaceRe
     }
   }, [facingMode, toast]);
 
+  useEffect(() => {
+      const init = async () => {
+          const modelsLoaded = await loadModels();
+          if (modelsLoaded) {
+              await loadKnownFaces();
+          }
+      };
+      init();
+  }, [loadModels, loadKnownFaces]);
+  
+
   const handlePlay = useCallback(() => {
     setLoadingMessage('');
     setIsReady(true);
@@ -184,7 +186,7 @@ const FaceScanner: React.FC<FaceScannerProps> = ({ mode = 'enrollment', onFaceRe
       faceapi.matchDimensions(canvas, displaySize);
 
       const detections = await faceapi
-        .detectAllFaces(video, new faceapi.TinyFaceDetectorOptions())
+        .detectAllFaces(video, new faceapi.SsdMobilenetv1Options({ minConfidence: 0.5 }))
         .withFaceLandmarks()
         .withFaceDescriptors();
 
@@ -196,7 +198,7 @@ const FaceScanner: React.FC<FaceScannerProps> = ({ mode = 'enrollment', onFaceRe
       let foundUnknownFace = false;
 
       if (knownFaces.length > 0 && resizedDetections.length > 0) {
-        const faceMatcher = new faceapi.FaceMatcher(knownFaces, 0.6);
+        const faceMatcher = new faceapi.FaceMatcher(knownFaces, 0.5);
         
         resizedDetections.forEach((detection: any) => {
           const { descriptor, detection: det } = detection;
@@ -381,3 +383,5 @@ const FaceScanner: React.FC<FaceScannerProps> = ({ mode = 'enrollment', onFaceRe
 };
 
 export default FaceScanner;
+
+    
