@@ -91,7 +91,7 @@ export default function Home() {
           {/* Right Side: Illustration */}
           <div className="w-full lg:w-1/2 flex justify-center items-center mt-8 lg:mt-0">
              <Image 
-                src="https://storage.googleapis.com/app-prototyper.appspot.com/669f91a2214a4c5ffaba3983_5914611.png" 
+                src="https://storage.googleapis.com/app-prototyper.appspot.com/66a4f387e3a364121a88a032/5914611.png"
                 alt="Teacher with students taking attendance"
                 width={600}
                 height={500}
