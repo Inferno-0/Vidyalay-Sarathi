@@ -13,7 +13,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark">
+    <html lang="en">
       <head>
         <title>Vidyalay Sarathi</title>
         <meta name="description" content="An AI-powered attendance tracking application" />
