@@ -307,10 +307,31 @@ const FaceScanner: React.FC<FaceScannerProps> = ({ mode = 'enrollment', onFaceRe
 
   const progress = (enrollmentStep / enrollmentSteps.length) * 100;
 
+  const renderEnrollmentControls = () => (
+    <div className="w-full md:w-1/3 md:pl-6 flex flex-col justify-center">
+        <div className="bg-muted/50 p-4 rounded-lg shadow-lg text-center backdrop-blur-sm">
+            <p className="text-lg font-semibold mb-2">Step {enrollmentStep + 1} of {enrollmentSteps.length}</p>
+            <p className="text-muted-foreground mb-4">{enrollmentSteps[enrollmentStep]}</p>
+            <Progress value={progress} className="w-full mb-4" />
+            <Button onClick={handleCaptureFace} size="lg" className="w-full">
+                <Camera className="mr-2 h-5 w-5" />
+                Capture Pose
+            </Button>
+        </div>
+    </div>
+  );
+
   return (
-    <div className="relative w-full h-full bg-card flex flex-col items-center justify-center">
+    <div className="relative w-full bg-card flex flex-col md:flex-row items-center justify-center p-4 min-h-[60vh] md:min-h-[70vh]">
+      {loadingMessage && (
+        <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-background/80 backdrop-blur-sm">
+          <Loader className="h-12 w-12 animate-spin text-primary mb-4" />
+          <p className="text-lg text-muted-foreground">{loadingMessage}</p>
+        </div>
+      )}
+      
       {hasCameraPermission === false && (
-         <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-background/80 backdrop-blur-sm p-4">
+         <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-background/80 backdrop-blur-sm p-4">
              <Alert variant="destructive" className="max-w-md">
               <AlertTitle>Camera Access Denied</AlertTitle>
               <AlertDescription>
@@ -319,48 +340,40 @@ const FaceScanner: React.FC<FaceScannerProps> = ({ mode = 'enrollment', onFaceRe
             </Alert>
          </div>
       )}
-
-      {loadingMessage && (
-        <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-background/80 backdrop-blur-sm">
-          <Loader className="h-12 w-12 animate-spin text-primary mb-4" />
-          <p className="text-lg text-muted-foreground">{loadingMessage}</p>
+      
+      <div className={`relative w-full h-full flex flex-col ${mode === 'enrollment' ? 'md:w-2/3' : 'w-full'}`}>
+        <div className="relative w-full aspect-video">
+          <video
+            ref={videoRef}
+            onPlay={handlePlay}
+            autoPlay
+            muted
+            playsInline
+            className={`w-full h-full object-cover rounded-md transition-opacity duration-500 ${isReady ? 'opacity-100' : 'opacity-0'} ${facingMode === 'user' ? 'transform -scale-x-100' : ''}`}
+          />
+          <canvas ref={canvasRef} className={`absolute inset-0 w-full h-full ${facingMode === 'user' ? 'transform -scale-x-100' : ''}`} />
+          {isReady && hasCameraPermission && (
+            <Button 
+                onClick={toggleCamera}
+                variant="outline"
+                size="icon"
+                className="absolute top-4 left-4 z-10"
+            >
+                <SwitchCamera className="h-5 w-5" />
+                <span className="sr-only">Switch Camera</span>
+            </Button>
+          )}
         </div>
-      )}
-
-      <div className="relative w-full h-full">
-        <video
-          ref={videoRef}
-          onPlay={handlePlay}
-          autoPlay
-          muted
-          playsInline
-          className={`w-full h-full object-cover transition-opacity duration-500 ${isReady ? 'opacity-100' : 'opacity-0'} ${facingMode === 'user' ? 'transform -scale-x-100' : ''}`}
-        />
-        <canvas ref={canvasRef} className={`absolute inset-0 w-full h-full ${facingMode === 'user' ? 'transform -scale-x-100' : ''}`} />
+        {isReady && mode === 'enrollment' && !isDialogOpen && (
+          <div className="md:hidden mt-4">
+              {renderEnrollmentControls()}
+          </div>
+        )}
       </div>
 
-      
-      {isReady && hasCameraPermission && (
-        <Button 
-            onClick={toggleCamera}
-            variant="outline"
-            size="icon"
-            className="absolute top-4 left-4 z-20"
-        >
-            <SwitchCamera className="h-5 w-5" />
-            <span className="sr-only">Switch Camera</span>
-        </Button>
-      )}
-
       {isReady && mode === 'enrollment' && !isDialogOpen && (
-        <div className="absolute bottom-4 left-4 right-4 z-20 bg-background/80 p-4 rounded-lg shadow-lg text-center backdrop-blur-sm">
-            <p className="text-lg font-semibold mb-2">Step {enrollmentStep + 1} of {enrollmentSteps.length}</p>
-            <p className="text-muted-foreground mb-4">{enrollmentSteps[enrollmentStep]}</p>
-            <Progress value={progress} className="w-full mb-4" />
-            <Button onClick={handleCaptureFace} size="lg">
-                <Camera className="mr-2 h-5 w-5" />
-                Capture Pose
-            </Button>
+        <div className="hidden md:flex md:w-1/3">
+           {renderEnrollmentControls()}
         </div>
       )}
 
@@ -372,10 +385,11 @@ const FaceScanner: React.FC<FaceScannerProps> = ({ mode = 'enrollment', onFaceRe
               Enter the student's details. All 7 images will be saved to their profile.
             </DialogDescription>
           </DialogHeader>
-          <div className="grid grid-cols-3 gap-2 py-4">
-            {capturedImages.map((img, index) => (
+          <div className="grid grid-cols-4 gap-2 py-4">
+            {capturedImages.slice(0, 7).map((img, index) => (
                 <img key={index} src={img} alt={`Capture ${index + 1}`} className="rounded-md w-full h-auto object-cover" />
             ))}
+             {capturedImages.length > 7 && <div className="rounded-md w-full h-auto object-cover bg-muted flex items-center justify-center text-xs">+{capturedImages.length - 7} more</div>}
           </div>
           <div className="grid gap-4 py-4">
             <div className="grid grid-cols-4 items-center gap-4">
