@@ -100,6 +100,7 @@ export async function getAttendanceForStudent(studentId: string, date: string): 
   const today = new Date();
   today.setHours(0, 0, 0, 0); 
   const currentDate = new Date(date);
+  currentDate.setHours(0,0,0,0);
   
   if (currentDate > today) return 'Not Marked';
   if (currentDate < sessionStartDate) return 'Not Marked';
@@ -110,11 +111,16 @@ export async function getAttendanceForStudent(studentId: string, date: string): 
 
   const attendanceLog = await getAttendanceLog();
   const studentAttendance = attendanceLog[studentId];
+  
   if (studentAttendance && studentAttendance[date]) {
     return studentAttendance[date];
   }
   
-  return 'Absent';
+  // If today is the date being checked, and no record exists, they are absent.
+  // Otherwise, it's just not marked yet.
+  if(currentDate.getTime() < today.getTime()) return 'Absent';
+
+  return 'Not Marked';
 }
 
 export async function getAttendanceForDate(date: string): Promise<Record<string, AttendanceStatus>> {
