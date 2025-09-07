@@ -72,14 +72,15 @@ export default function AttendanceRegisterPage() {
         <div className="md:col-span-1">
            <Card>
              <CardContent className="p-0">
-                <Calendar
-                    mode="single"
-                    selected={date}
-                    onSelect={setDate}
-                    fromDate={new Date('2025-08-01')}
-                    className="rounded-md w-full"
-                    disabled={!date}
-                />
+                {date && (
+                    <Calendar
+                        mode="single"
+                        selected={date}
+                        onSelect={setDate}
+                        fromDate={new Date('2025-08-01')}
+                        className="rounded-md w-full"
+                    />
+                )}
              </CardContent>
            </Card>
         </div>
