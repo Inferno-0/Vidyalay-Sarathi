@@ -16,15 +16,21 @@ interface KnownFace {
 // MOCK DATA - In a real app, this would be a database call
 const mockAttendance: Record<string, Record<string, 'Present' | 'Absent' | 'Leave' | 'Holiday'>> = {
     "Sanju": {
-        "2024-07-20": "Present",
-        "2024-07-21": "Present",
-        "2024-07-22": "Absent",
+        "2025-08-01": "Present",
+        "2025-08-02": "Present",
     },
     "Cotton Collector": {
-        "2024-07-20": "Leave",
-        "2024-07-21": "Present",
+        "2025-08-01": "Leave",
+        "2025-08-02": "Present",
     }
 };
+
+// MOCK HOLIDAYS - In a real app, this would be a database call
+const mockHolidays = [
+    { date: "2025-08-15", name: "Independence Day" },
+    { date: "2025-10-02", name: "Gandhi Jayanti" },
+];
+
 
 async function ensureDataFileExists() {
   try {
@@ -84,19 +90,27 @@ export async function deleteKnownFace(label: string): Promise<void> {
 }
 
 export async function getAttendanceForStudent(studentId: string, date: string): Promise<'Present' | 'Absent' | 'Leave' | 'Holiday' | 'Not Marked'> {
-  // This is a mock function. In a real app, you'd query Firestore.
-  // Example: db.collection('attendance').where('studentId', '==', studentId).where('date', '==', date).get()
+  const sessionStartDate = new Date('2025-08-01');
+  const currentDate = new Date(date);
+
+  // If before session start, attendance is not applicable
+  if (currentDate < sessionStartDate) {
+    return 'Not Marked';
+  }
   
-  // For demo purposes, we'll use the mock data.
-  // We'll also simulate a holiday.
-  if (new Date(date).getDay() === 0) return 'Holiday'; // Sunday is a holiday
-  
+  // Check for holidays
+  if (currentDate.getDay() === 0) return 'Holiday'; // Sunday
+  const isHoliday = mockHolidays.some(h => h.date === date);
+  if (isHoliday) return 'Holiday';
+
+  // Check for marked attendance
   const studentAttendance = mockAttendance[studentId];
   if (studentAttendance && studentAttendance[date]) {
     return studentAttendance[date];
   }
   
-  return 'Not Marked';
+  // Default to Absent if after session start and not a holiday/leave/present
+  return 'Absent';
 }
 
 export async function getAttendanceForDate(date: string): Promise<Record<string, 'Present' | 'Absent' | 'Leave' | 'Holiday' | 'Not Marked'>> {
