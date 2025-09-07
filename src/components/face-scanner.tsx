@@ -222,25 +222,39 @@ const FaceScanner: React.FC<FaceScannerProps> = ({ mode = 'enrollment', onFaceRe
             const bestMatch = faceMatcher.findBestMatch(resizedDetections.descriptor);
             const box = resizedDetections.detection.box;
             
-            const isRecognized = recognizedLabels.has(bestMatch.label);
+            const isAlreadyRecognized = recognizedLabels.has(bestMatch.label);
 
-            if (isRecognized) {
-              // Persistent green overlay for already marked students
-              ctx.fillStyle = 'rgba(46, 204, 113, 0.4)';
-              ctx.fillRect(box.x, box.y, box.width, box.height);
-              ctx.font = '24px Arial';
-              ctx.fillStyle = 'white';
-              ctx.fillText('✅', box.x + box.width - 30, box.y + 30);
-            }
-
-            const drawBox = new faceapi.draw.DrawBox(box, { 
-              label: bestMatch.toString(),
-              boxColor: bestMatch.label !== 'unknown' || isRecognized ? '#2ECC71' : '#E74C3C',
-            });
-            drawBox.draw(canvas);
-
-            if (bestMatch.label !== 'unknown' && onFaceRecognized && !isRecognized) {
-              onFaceRecognized(bestMatch.label);
+            if (bestMatch.label !== 'unknown') {
+                if (isAlreadyRecognized) {
+                    // Draw a persistent green overlay for already marked students
+                    ctx.fillStyle = 'rgba(46, 204, 113, 0.4)';
+                    ctx.fillRect(box.x, box.y, box.width, box.height);
+                    ctx.font = '24px Arial';
+                    ctx.fillStyle = 'white';
+                    ctx.fillText('✅', box.x + box.width - 30, box.y + 30);
+                    const drawBox = new faceapi.draw.DrawBox(box, { 
+                      label: `${bestMatch.label} (Present)`,
+                      boxColor: '#2ECC71',
+                    });
+                    drawBox.draw(canvas);
+                } else {
+                    // Draw standard box and trigger recognition
+                    const drawBox = new faceapi.draw.DrawBox(box, { 
+                      label: bestMatch.toString(),
+                      boxColor: '#2ECC71',
+                    });
+                    drawBox.draw(canvas);
+                    if (onFaceRecognized) {
+                      onFaceRecognized(bestMatch.label);
+                    }
+                }
+            } else {
+                 // Draw box for "unknown"
+                const drawBox = new faceapi.draw.DrawBox(box, { 
+                    label: 'Unknown',
+                    boxColor: '#E74C3C',
+                });
+                drawBox.draw(canvas);
             }
         } else {
             faceapi.draw.drawDetections(canvas, resizedDetections);
