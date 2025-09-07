@@ -43,17 +43,17 @@ export default function Home() {
             <Dots />
         </div>
 
-        <div className="relative z-10 w-full max-w-6xl p-8 grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+        <div className="relative z-10 w-full max-w-6xl p-8 grid grid-cols-1 items-center">
             <div className="flex flex-col">
-                <div className="mb-12">
+                <div className="mb-12 text-center">
                   <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight mb-2 text-primary">
                     Vidyalay Sarathi
                   </h1>
-                  <p className="text-md md:text-lg text-muted-foreground max-w-md">
+                  <p className="text-md md:text-lg text-muted-foreground max-w-md mx-auto">
                     Smart Attendance Tracking Application for Rural Schools
                   </p>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                     <Link href="/attendance" passHref>
                       <Card className="group transform transition-all duration-300 hover:scale-105 hover:shadow-xl shadow-lg rounded-2xl cursor-pointer bg-card">
                         <CardHeader className="p-6">
@@ -102,16 +102,6 @@ export default function Home() {
                       </Card>
                     </Link>
                 </div>
-            </div>
-
-            <div className="hidden md:flex items-center justify-center">
-                 <Image 
-                    src="https://storage.googleapis.com/app-prototyper.appspot.com/66a4f387e3a364121a88a032/5914611.png" 
-                    alt="Teacher with students"
-                    width={500}
-                    height={500}
-                    className="object-contain"
-                />
             </div>
         </div>
     </div>
