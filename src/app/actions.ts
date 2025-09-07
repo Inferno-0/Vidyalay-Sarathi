@@ -11,6 +11,19 @@ interface KnownFace {
   images: string[];
 }
 
+// MOCK DATA - In a real app, this would be a database call
+const mockAttendance: Record<string, Record<string, 'Present' | 'Absent' | 'Leave' | 'Holiday'>> = {
+    "Sanju": {
+        "2024-07-20": "Present",
+        "2024-07-21": "Present",
+        "2024-07-22": "Absent",
+    },
+    "Cotton Collector": {
+        "2024-07-20": "Leave",
+        "2024-07-21": "Present",
+    }
+};
+
 async function ensureDataFileExists() {
   try {
     await fs.access(dataFilePath);
@@ -48,4 +61,34 @@ export async function deleteKnownFace(label: string): Promise<void> {
     let faces = await getKnownFaces();
     faces = faces.filter(f => f.label !== label);
     await fs.writeFile(dataFilePath, JSON.stringify(faces, null, 2));
+}
+
+export async function getAttendanceForStudent(studentId: string, date: string): Promise<'Present' | 'Absent' | 'Leave' | 'Holiday' | 'Not Marked'> {
+  // This is a mock function. In a real app, you'd query Firestore.
+  // Example: db.collection('attendance').where('studentId', '==', studentId).where('date', '==', date).get()
+  
+  // For demo purposes, we'll use the mock data.
+  // We'll also simulate a holiday.
+  if (new Date(date).getDay() === 0) return 'Holiday'; // Sunday is a holiday
+  
+  const studentAttendance = mockAttendance[studentId];
+  if (studentAttendance && studentAttendance[date]) {
+    return studentAttendance[date];
+  }
+  
+  return 'Not Marked';
+}
+
+export async function takeAttendance(studentId: string, date: string, status: 'Present' | 'Absent' | 'Leave'): Promise<void> {
+  // This is a mock function. In a real app, you'd write to Firestore.
+  // Example: db.collection('attendance').add({ studentId, date, status, day: new Date(date).toLocaleString('en-us', { weekday: 'long' }) })
+  console.log(`Marking ${studentId} as ${status} for ${date}`);
+  
+  if (!mockAttendance[studentId]) {
+    mockAttendance[studentId] = {};
+  }
+  mockAttendance[studentId][date] = status;
+  
+  // This is just to demonstrate it works without a real DB.
+  // In a real app, this server action would just update Firestore.
 }
