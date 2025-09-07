@@ -36,7 +36,7 @@ const FaceScanner: React.FC<FaceScannerProps> = ({ mode = 'enrollment', onFaceRe
   const [newFaceData, setNewFaceData] = useState({ name: '', class: '', rollNo: ''});
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [unknownFaceDetected, setUnknownFaceDetected] = useState(false);
-  const [knownFaces, setKnownFaces] = useState<any[]>([]);
+  const [faceMatcher, setFaceMatcher] = useState<any>(null);
   const { toast } = useToast();
   const detectionInterval = useRef<NodeJS.Timeout>();
   const [facingMode, setFacingMode] = useState<'user' | 'environment'>('user');
@@ -99,7 +99,14 @@ const FaceScanner: React.FC<FaceScannerProps> = ({ mode = 'enrollment', onFaceRe
                 return null;
             })
         );
-        setKnownFaces(labeledFaceDescriptors.filter(d => d !== null));
+        
+        const validDescriptors = labeledFaceDescriptors.filter(d => d !== null);
+        if (validDescriptors.length > 0) {
+          setFaceMatcher(new faceapi.FaceMatcher(validDescriptors, 0.4));
+        } else {
+          setFaceMatcher(null);
+        }
+
         setLoadingMessage('');
     } catch (error) {
         console.error("Failed to load known faces from server:", error);
@@ -173,7 +180,7 @@ const FaceScanner: React.FC<FaceScannerProps> = ({ mode = 'enrollment', onFaceRe
     const detectionOptions = new faceapi.SsdMobilenetv1Options({ minConfidence: 0.5 });
 
     detectionInterval.current = setInterval(async () => {
-      if (!videoRef.current || videoRef.current.paused || videoRef.current.ended || typeof faceapi === 'undefined' || isDialogOpen) {
+      if (!videoRef.current || videoRef.current.paused || videoRef.current.ended || typeof faceapi === 'undefined' || isDialogOpen || !faceMatcher) {
         return;
       }
       
@@ -196,9 +203,7 @@ const FaceScanner: React.FC<FaceScannerProps> = ({ mode = 'enrollment', onFaceRe
       
       let foundUnknownFace = false;
 
-      if (knownFaces.length > 0 && resizedDetections.length > 0) {
-        const faceMatcher = new faceapi.FaceMatcher(knownFaces, 0.5);
-        
+      if (faceMatcher && resizedDetections.length > 0) {
         resizedDetections.forEach((detection: any) => {
           const { descriptor, detection: det } = detection;
           const bestMatch = faceMatcher.findBestMatch(descriptor);
@@ -227,9 +232,9 @@ const FaceScanner: React.FC<FaceScannerProps> = ({ mode = 'enrollment', onFaceRe
           });
       }
       setUnknownFaceDetected(foundUnknownFace);
-    }, 1000);
+    }, 1500);
 
-  }, [isDialogOpen, knownFaces, mode, onFaceRecognized]);
+  }, [isDialogOpen, faceMatcher, mode, onFaceRecognized]);
 
   const handleCaptureFace = () => {
     if (videoRef.current) {
