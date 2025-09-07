@@ -56,22 +56,17 @@ const getPose = (landmarks: any): Pose => {
 
     const noseToMidEyeX = nose.x - eyeMidPoint.x;
     const yawRatio = noseToMidEyeX / eyeDist;
-
-    // A simplified pitch estimation.
     const pitchRatio = (chin.y - nose.y) / eyeDist;
 
-    // Yaw detection (left/right turns)
     if (yawRatio < -0.35) return 'right';
     if (yawRatio > 0.35) return 'left';
+    if (pitchRatio > 1.2) return 'down'; 
+    if (pitchRatio < 0.95) return 'up';
     if (yawRatio < -0.15) return 'jaw_right';
     if (yawRatio > 0.15) return 'jaw_left';
-
-    // Pitch detection (up/down tilts)
-    if (pitchRatio > 1.25) return 'down'; 
-    if (pitchRatio < 0.95) return 'up';
-
-    // If no extreme pose detected, assume front
-    if (Math.abs(yawRatio) < 0.15 && pitchRatio > 0.95 && pitchRatio < 1.25) return 'front';
+    
+    // Check for front last, as it's the default neutral pose.
+    if (Math.abs(yawRatio) < 0.15) return 'front';
 
     return 'unknown';
 };
@@ -231,12 +226,7 @@ const FaceScanner: React.FC<FaceScannerProps> = ({ mode = 'enrollment', onFaceRe
         context.drawImage(video, 0, 0, canvas.width, canvas.height);
         const dataUrl = canvas.toDataURL('image/jpeg');
         
-        setCapturedImages(prevImages => {
-            const newImages = [...prevImages, dataUrl];
-             // Using useEffect to handle dialog opening based on newImages.length
-            return newImages;
-        });
-        
+        setCapturedImages(prevImages => [...prevImages, dataUrl]);
         setEnrollmentStep(prev => prev + 1);
         poseHeldSince.current = null;
         setCaptureCountdown(null);
@@ -303,7 +293,7 @@ const FaceScanner: React.FC<FaceScannerProps> = ({ mode = 'enrollment', onFaceRe
         const isPoseCorrect = mode === 'enrollment' && enrollmentStep < enrollmentSteps.length && currentDetectedPose === enrollmentSteps[enrollmentStep].requiredPose;
 
         // Auto-capture logic for enrollment
-        if (isPoseCorrect && !alreadyEnrolledMessage && captureCountdown === null && poseHeldSince.current === null) {
+        if (isPoseCorrect && !alreadyEnrolledMessage && poseHeldSince.current === null) {
             poseHeldSince.current = Date.now();
         } else if (isPoseCorrect && !alreadyEnrolledMessage && poseHeldSince.current !== null) {
             const holdDuration = Date.now() - poseHeldSince.current;
