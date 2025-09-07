@@ -39,7 +39,7 @@ export default function Home() {
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <Link href="/attendance" passHref>
-                  <Card className="group transform transition-all duration-300 hover:scale-105 hover:shadow-2xl shadow-lg rounded-2xl cursor-pointer bg-card border-primary/20">
+                  <Card className="group transform transition-all duration-300 hover:scale-105 hover:shadow-2xl shadow-lg rounded-2xl cursor-pointer bg-white border-primary/20">
                     <CardHeader className="p-6">
                       <CalendarCheck className="w-12 h-12 mb-4 text-primary transition-transform duration-300 group-hover:scale-110" />
                       <CardTitle className="text-xl font-bold">Take Attendance</CardTitle>
@@ -51,7 +51,7 @@ export default function Home() {
                 </Link>
                 
                 <Link href="/scanner" passHref>
-                  <Card className="group transform transition-all duration-300 hover:scale-105 hover:shadow-2xl shadow-lg rounded-2xl cursor-pointer bg-card border-primary/20">
+                  <Card className="group transform transition-all duration-300 hover:scale-105 hover:shadow-2xl shadow-lg rounded-2xl cursor-pointer bg-white border-primary/20">
                     <CardHeader className="p-6">
                       <UserPlus className="w-12 h-12 mb-4 text-primary transition-transform duration-300 group-hover:scale-110" />
                       <CardTitle className="text-xl font-bold">Add New Student</CardTitle>
@@ -63,7 +63,7 @@ export default function Home() {
                 </Link>
 
                 <Link href="/known-faces" passHref>
-                  <Card className="group transform transition-all duration-300 hover:scale-105 hover:shadow-2xl shadow-lg rounded-2xl cursor-pointer bg-card border-green-500/20">
+                  <Card className="group transform transition-all duration-300 hover:scale-105 hover:shadow-2xl shadow-lg rounded-2xl cursor-pointer bg-white border-green-500/20">
                     <CardHeader className="p-6">
                       <Smile className="w-12 h-12 mb-4 text-green-500 transition-transform duration-300 group-hover:scale-110" />
                       <CardTitle className="text-xl font-bold">Known Faces</CardTitle>
@@ -75,7 +75,7 @@ export default function Home() {
                 </Link>
 
                 <Link href="/attendance-history" passHref>
-                  <Card className="group transform transition-all duration-300 hover:scale-105 hover:shadow-2xl shadow-lg rounded-2xl cursor-pointer bg-card border-primary/20">
+                  <Card className="group transform transition-all duration-300 hover:scale-105 hover:shadow-2xl shadow-lg rounded-2xl cursor-pointer bg-white border-primary/20">
                     <CardHeader className="p-6">
                       <BookUser className="w-12 h-12 mb-4 text-primary transition-transform duration-300 group-hover:scale-110" />
                       <CardTitle className="text-xl font-bold">Attendance Register</CardTitle>
