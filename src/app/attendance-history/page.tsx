@@ -24,7 +24,7 @@ interface AttendanceRecord {
 }
 
 export default function AttendanceRegisterPage() {
-  const [date, setDate] = useState<Date | undefined>(new Date());
+  const [date, setDate] = useState<Date | undefined>(undefined);
   const [students, setStudents] = useState<Student[]>([]);
   const [attendance, setAttendance] = useState<Record<string, AttendanceRecord['status']>>({});
   const [loading, setLoading] = useState(true);
@@ -44,6 +44,10 @@ export default function AttendanceRegisterPage() {
     } finally {
       setLoading(false);
     }
+  }, []);
+  
+  useEffect(() => {
+    setDate(new Date());
   }, []);
 
   useEffect(() => {
@@ -74,6 +78,7 @@ export default function AttendanceRegisterPage() {
                     onSelect={setDate}
                     fromDate={new Date('2025-08-01')}
                     className="rounded-md w-full"
+                    disabled={!date}
                 />
              </CardContent>
            </Card>
@@ -83,11 +88,11 @@ export default function AttendanceRegisterPage() {
               <CardHeader>
                 <CardTitle>Daily Attendance Report</CardTitle>
                 <CardDescription>
-                  Showing attendance for {date ? format(date, 'PPP') : 'No date selected'}
+                  Showing attendance for {date ? format(date, 'PPP') : 'Loading date...'}
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                {loading ? (
+                {loading || !date ? (
                   <div className="text-center py-8"><Loader2 className="h-8 w-8 animate-spin mx-auto" /></div>
                 ) : (
                   <Table>
