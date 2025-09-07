@@ -8,6 +8,8 @@ const dataFilePath = path.join(process.cwd(), 'data', 'faces.json');
 
 interface KnownFace {
   label: string;
+  class: string;
+  rollNo: string;
   images: string[];
 }
 
@@ -44,18 +46,36 @@ export async function getKnownFaces(): Promise<KnownFace[]> {
   }
 }
 
-export async function saveKnownFace(face: { label: string; image: string }): Promise<void> {
+export async function saveKnownFace(face: { label: string; class: string; rollNo: string; image: string }): Promise<void> {
     const faces = await getKnownFaces();
     const existingFace = faces.find(f => f.label === face.label);
 
     if (existingFace) {
         existingFace.images.push(face.image);
+        existingFace.class = face.class;
+        existingFace.rollNo = face.rollNo;
     } else {
-        faces.push({ label: face.label, images: [face.image] });
+        faces.push({ label: face.label, class: face.class, rollNo: face.rollNo, images: [face.image] });
     }
     
     await fs.writeFile(dataFilePath, JSON.stringify(faces, null, 2));
 }
+
+export async function updateKnownFace(label: string, newData: { name: string; class: string; rollNo: string }): Promise<void> {
+    let faces = await getKnownFaces();
+    const faceIndex = faces.findIndex(f => f.label === label);
+
+    if (faceIndex > -1) {
+        faces[faceIndex].label = newData.name;
+        faces[faceIndex].class = newData.class;
+        faces[faceIndex].rollNo = newData.rollNo;
+    } else {
+        throw new Error("Face not found");
+    }
+
+    await fs.writeFile(dataFilePath, JSON.stringify(faces, null, 2));
+}
+
 
 export async function deleteKnownFace(label: string): Promise<void> {
     let faces = await getKnownFaces();
@@ -78,6 +98,18 @@ export async function getAttendanceForStudent(studentId: string, date: string): 
   
   return 'Not Marked';
 }
+
+export async function getAttendanceForDate(date: string): Promise<Record<string, 'Present' | 'Absent' | 'Leave' | 'Holiday' | 'Not Marked'>> {
+  const students = await getKnownFaces();
+  const attendanceData: Record<string, 'Present' | 'Absent' | 'Leave' | 'Holiday' | 'Not Marked'> = {};
+
+  for (const student of students) {
+    attendanceData[student.label] = await getAttendanceForStudent(student.label, date);
+  }
+
+  return attendanceData;
+}
+
 
 export async function takeAttendance(studentId: string, date: string, status: 'Present' | 'Absent' | 'Leave'): Promise<void> {
   // This is a mock function. In a real app, you'd write to Firestore.

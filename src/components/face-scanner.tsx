@@ -17,6 +17,8 @@ const MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model/';
 
 interface KnownFaceData {
     label: string;
+    class: string;
+    rollNo: string;
     images: string[];
 }
 
@@ -26,7 +28,7 @@ const FaceScanner = () => {
   const [loadingMessage, setLoadingMessage] = useState('Initializing...');
   const [isReady, setIsReady] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [newFaceName, setNewFaceName] = useState('');
+  const [newFaceData, setNewFaceData] = useState({ name: '', class: '', rollNo: ''});
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [unknownFaceDetected, setUnknownFaceDetected] = useState(false);
   const [knownFaces, setKnownFaces] = useState<any[]>([]);
@@ -61,10 +63,9 @@ const FaceScanner = () => {
     if (videoRef.current && videoRef.current.srcObject) {
       const stream = videoRef.current.srcObject as MediaStream;
       stream.getTracks().forEach(track => track.stop());
-      videoRef.current.srcObject = null;
     }
 
-    await new Promise(resolve => setTimeout(resolve, 100));
+    await new Promise(resolve => setTimeout(resolve, 100)); // Give browser time to release hardware
     
     try {
         setLoadingMessage('Accessing camera...');
@@ -133,15 +134,17 @@ const FaceScanner = () => {
     }
   }, []);
 
+  const reInit = useCallback(async () => {
+    const modelsLoaded = await loadModels();
+    if (modelsLoaded) {
+        await loadKnownFaces();
+        await startVideo();
+    }
+  }, [loadModels, loadKnownFaces, startVideo]);
+
+
   useEffect(() => {
-    const init = async () => {
-        const modelsLoaded = await loadModels();
-        if (modelsLoaded) {
-            await loadKnownFaces();
-            await startVideo();
-        }
-    };
-    init();
+    reInit();
 
     return () => {
       if (detectionInterval.current) {
@@ -152,8 +155,7 @@ const FaceScanner = () => {
         stream.getTracks().forEach(track => track.stop());
       }
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [facingMode]);
+  }, [reInit]);
 
   const handlePlay = useCallback(() => {
     setLoadingMessage('');
@@ -241,10 +243,12 @@ const FaceScanner = () => {
   };
 
   const handleSaveFace = async () => {
-    if (newFaceName && capturedImage) {
+    if (newFaceData.name && capturedImage) {
         try {
             await saveKnownFace({
-                label: newFaceName,
+                label: newFaceData.name,
+                class: newFaceData.class,
+                rollNo: newFaceData.rollNo,
                 image: capturedImage,
             });
             
@@ -252,7 +256,7 @@ const FaceScanner = () => {
 
             toast({
                 title: "Face Saved!",
-                description: `${newFaceName} has been added to your known faces.`,
+                description: `${newFaceData.name} has been added to your known faces.`,
             });
             
         } catch (error) {
@@ -270,12 +274,19 @@ const FaceScanner = () => {
   
   const closeDialog = () => {
     setIsDialogOpen(false);
-    setNewFaceName('');
+    setNewFaceData({ name: '', class: '', rollNo: '' });
     setCapturedImage(null);
   }
 
   const toggleCamera = () => {
-    setFacingMode(prev => (prev === 'user' ? 'environment' : 'user'));
+    setFacingMode(prev => {
+        const newMode = prev === 'user' ? 'environment' : 'user';
+        // Re-initialize everything when camera switches
+        setIsReady(false);
+        setLoadingMessage('Switching camera...');
+        startVideo();
+        return newMode;
+    });
   };
 
   return (
@@ -336,7 +347,7 @@ const FaceScanner = () => {
           <DialogHeader>
             <DialogTitle>Save New Face</DialogTitle>
             <DialogDescription>
-              A new face was detected. Enter a name to save it. If the name already exists, this image will be added to their profile.
+              Enter the student's details. If the name already exists, this image will be added to their profile.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
@@ -346,21 +357,21 @@ const FaceScanner = () => {
                 </div>
             )}
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="name" className="text-right">
-                Name
-              </Label>
-              <Input
-                id="name"
-                value={newFaceName}
-                onChange={(e) => setNewFaceName(e.target.value)}
-                className="col-span-3"
-                placeholder="Enter name"
-              />
+              <Label htmlFor="name" className="text-right">Name</Label>
+              <Input id="name" value={newFaceData.name} onChange={(e) => setNewFaceData({...newFaceData, name: e.target.value})} className="col-span-3" placeholder="Student's full name" />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="class" className="text-right">Class</Label>
+              <Input id="class" value={newFaceData.class} onChange={(e) => setNewFaceData({...newFaceData, class: e.target.value})} className="col-span-3" placeholder="e.g., 10th A" />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="rollNo" className="text-right">Roll No</Label>
+              <Input id="rollNo" value={newFaceData.rollNo} onChange={(e) => setNewFaceData({...newFaceData, rollNo: e.target.value})} className="col-span-3" placeholder="e.g., 25" />
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={closeDialog}>Cancel</Button>
-            <Button onClick={handleSaveFace}>Save Face</Button>
+            <Button onClick={handleSaveFace}>Save Student</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

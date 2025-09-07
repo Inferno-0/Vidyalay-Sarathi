@@ -4,15 +4,19 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Trash2, Loader2 } from 'lucide-react';
+import { Trash2, Loader2, Pencil } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
-import { getKnownFaces, deleteKnownFace } from '@/app/actions';
+import { getKnownFaces, deleteKnownFace, updateKnownFace } from '@/app/actions';
 import MainLayout from '@/components/main-layout';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 interface KnownFace {
   label: string;
+  class: string;
+  rollNo: string;
   images: string[];
 }
 
@@ -20,6 +24,9 @@ export default function KnownFacesPage() {
   const [knownFaces, setKnownFaces] = useState<KnownFace[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedFace, setSelectedFace] = useState<KnownFace | null>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [editFormData, setEditFormData] = useState({ name: '', class: '', rollNo: '' });
   const { toast } = useToast();
 
   const loadFaces = useCallback(async () => {
@@ -42,6 +49,18 @@ export default function KnownFacesPage() {
     loadFaces();
   }, [loadFaces]);
 
+  const openDeleteDialog = (face: KnownFace) => {
+    setSelectedFace(face);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const openEditDialog = (face: KnownFace) => {
+    setSelectedFace(face);
+    setEditFormData({ name: face.label, class: face.class, rollNo: face.rollNo });
+    setIsEditDialogOpen(true);
+  };
+
+
   const handleDeleteFace = async () => {
     if (!selectedFace) return;
 
@@ -62,6 +81,29 @@ export default function KnownFacesPage() {
             description: 'Could not delete the face. Please try again.',
         });
     }
+    setIsDeleteDialogOpen(false);
+    setSelectedFace(null);
+  };
+
+  const handleEditFace = async () => {
+    if (!selectedFace || !editFormData.name) return;
+
+    try {
+      await updateKnownFace(selectedFace.label, editFormData);
+      await loadFaces();
+      toast({
+        title: 'Details Updated',
+        description: `Details for ${editFormData.name} have been updated.`,
+      });
+    } catch (error) {
+      console.error("Failed to update face:", error);
+      toast({
+        variant: 'destructive',
+        title: 'Update Error',
+        description: 'Could not update details.',
+      });
+    }
+    setIsEditDialogOpen(false);
     setSelectedFace(null);
   };
 
@@ -73,57 +115,81 @@ export default function KnownFacesPage() {
             <p className="ml-4 text-lg">Loading faces...</p>
           </div>
         ) : knownFaces.length > 0 ? (
-          <div className="space-y-8 w-full">
-            {knownFaces.map((faceGroup) => (
-              <div key={faceGroup.label}>
-                <h2 className="text-2xl font-semibold mb-4">{faceGroup.label}</h2>
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                  {Array.isArray(faceGroup.images) && faceGroup.images.map((image, index) => (
-                    <Card key={`${faceGroup.label}-${index}`} className="text-center overflow-hidden cursor-pointer hover:shadow-lg transition-shadow" onClick={() => setSelectedFace(faceGroup)}>
-                      <CardContent className="p-0">
-                        <div className="relative w-full aspect-square">
-                          {image && (
-                           <img 
-                              src={image} 
-                              alt={`${faceGroup.label} - ${index + 1}`}
-                              className="w-full h-full object-cover"
-                              />
-                          )}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              </div>
+          <div className="w-full space-y-4">
+            {knownFaces.map((face) => (
+                <Card key={face.label} className="w-full">
+                    <CardContent className="p-4 flex items-center justify-between">
+                       <div className="flex items-center gap-4">
+                            <img 
+                                src={face.images[0]} 
+                                alt={face.label}
+                                className="w-20 h-20 object-cover rounded-md"
+                            />
+                            <div>
+                                <p className="font-bold text-xl">{face.label}</p>
+                                <p className="text-muted-foreground">{`Class: ${face.class || 'N/A'} | Roll No: ${face.rollNo || 'N/A'}`}</p>
+                            </div>
+                       </div>
+                       <div className="flex gap-2">
+                           <Button variant="outline" size="icon" onClick={() => openEditDialog(face)}><Pencil className="h-4 w-4" /></Button>
+                           <Button variant="destructive" size="icon" onClick={() => openDeleteDialog(face)}><Trash2 className="h-4 w-4" /></Button>
+                       </div>
+                    </CardContent>
+                </Card>
             ))}
           </div>
         ) : (
           <Alert>
             <AlertTitle>No Known Faces</AlertTitle>
             <AlertDescription>
-              No faces have been saved yet. Go back to the scanner to add some.
+              No faces have been saved yet. Go to the Add New Student page to enroll faces.
             </AlertDescription>
           </Alert>
         )}
 
-      <Dialog open={!!selectedFace} onOpenChange={() => setSelectedFace(null)}>
-        <DialogContent className="sm:max-w-md">
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={isDeleteDialogOpen} onOpenChange={() => setIsDeleteDialogOpen(false)}>
+        <DialogContent>
           <DialogHeader>
-             <DialogTitle className="text-2xl">{selectedFace?.label}</DialogTitle>
+            <DialogTitle>Are you sure?</DialogTitle>
+            <DialogDescription>
+                This action cannot be undone. This will permanently delete the records for {selectedFace?.label}.
+            </DialogDescription>
           </DialogHeader>
-          {selectedFace && (
-            <div className="flex justify-center p-4">
-                <img src={selectedFace.images[0]} alt={selectedFace.label} className="rounded-md w-full h-auto object-cover" />
-            </div>
-          )}
           <DialogFooter>
-            <Button variant="destructive" onClick={handleDeleteFace} disabled={!selectedFace}>
-                <Trash2 className="mr-2 h-4 w-4" />
-                Delete
-            </Button>
+            <Button variant="ghost" onClick={() => setIsDeleteDialogOpen(false)}>Cancel</Button>
+            <Button variant="destructive" onClick={handleDeleteFace}>Delete</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Edit Details Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={() => setIsEditDialogOpen(false)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Details for {selectedFace?.label}</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="name" className="text-right">Name</Label>
+                <Input id="name" value={editFormData.name} onChange={(e) => setEditFormData({...editFormData, name: e.target.value })} className="col-span-3" />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="class" className="text-right">Class</Label>
+                <Input id="class" value={editFormData.class} onChange={(e) => setEditFormData({...editFormData, class: e.target.value })} className="col-span-3" />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="rollNo" className="text-right">Roll No</Label>
+                <Input id="rollNo" value={editFormData.rollNo} onChange={(e) => setEditFormData({...editFormData, rollNo: e.target.value })} className="col-span-3" />
+              </div>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setIsEditDialogOpen(false)}>Cancel</Button>
+            <Button onClick={handleEditFace}>Save Changes</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
     </MainLayout>
   );
 }

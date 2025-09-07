@@ -5,7 +5,7 @@ import React from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
-import { Menu, Home, UserPlus, Users, CalendarCheck } from 'lucide-react';
+import { Menu, Home, UserPlus, Users, CalendarCheck, BookUser } from 'lucide-react';
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -17,6 +17,7 @@ const navLinks = [
   { href: '/scanner', label: 'Add New Student', icon: UserPlus },
   { href: '/known-faces', label: 'Known Faces', icon: Users },
   { href: '/attendance', label: 'Take Attendance', icon: CalendarCheck },
+  { href: '/attendance-history', label: 'Attendance History', icon: BookUser },
 ];
 
 export default function MainLayout({ children, title }: MainLayoutProps) {
@@ -32,7 +33,7 @@ export default function MainLayout({ children, title }: MainLayoutProps) {
               </Button>
             </SheetTrigger>
             <SheetContent side="left" className="w-[240px]">
-              <SheetHeader>
+               <SheetHeader>
                 <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
               </SheetHeader>
               <nav className="flex flex-col gap-4 mt-8">
