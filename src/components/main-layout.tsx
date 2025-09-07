@@ -5,7 +5,7 @@ import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Home, UserPlus, Users, CalendarCheck, BookUser } from 'lucide-react';
-import { SidebarProvider, Sidebar, SidebarTrigger, SidebarContent, SidebarHeader, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarInset } from '@/components/ui/sidebar';
+import { SidebarProvider, Sidebar, SidebarTrigger, SidebarContent, SidebarHeader, SidebarMenu, SidebarMenuItem, SidebarMenuButton } from '@/components/ui/sidebar';
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -47,9 +47,9 @@ export default function MainLayout({ children, title }: MainLayoutProps) {
               </SidebarMenu>
             </SidebarContent>
           </Sidebar>
-          <div className="flex flex-col flex-1 md:pl-[16rem]">
+          <div className="flex flex-col flex-1">
             <header className="sticky top-0 z-10 flex h-14 items-center gap-4 border-b bg-background px-4 sm:px-6">
-                <div className="md:hidden">
+                <div>
                     <SidebarTrigger/>
                 </div>
                 <h1 className="text-xl font-semibold">{title}</h1>
@@ -62,4 +62,3 @@ export default function MainLayout({ children, title }: MainLayoutProps) {
     </SidebarProvider>
   );
 }
-
