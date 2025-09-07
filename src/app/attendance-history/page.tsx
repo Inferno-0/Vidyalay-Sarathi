@@ -71,6 +71,7 @@ export default function AttendanceRegisterPage() {
                     selected={date}
                     onSelect={setDate}
                     defaultMonth={new Date('2025-08-01')}
+                    fromDate={new Date('2025-08-01')}
                     className="rounded-md w-full"
                 />
              </CardContent>

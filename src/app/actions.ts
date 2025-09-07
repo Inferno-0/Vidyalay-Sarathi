@@ -84,7 +84,14 @@ export async function deleteKnownFace(label: string): Promise<void> {
 
 export async function getAttendanceForStudent(studentId: string, date: string): Promise<'Present' | 'Absent' | 'Leave' | 'Holiday' | 'Not Marked'> {
   const sessionStartDate = new Date('2025-08-01');
+  const today = new Date();
+  today.setHours(0, 0, 0, 0); // Normalize today's date
   const currentDate = new Date(date);
+  
+  // If the date is in the future, it's not marked yet
+  if (currentDate > today) {
+    return 'Not Marked';
+  }
 
   // If before session start, attendance is not applicable
   if (currentDate < sessionStartDate) {
