@@ -45,16 +45,16 @@ export async function getKnownFaces(): Promise<KnownFace[]> {
   }
 }
 
-export async function saveKnownFace(face: { label: string; class: string; rollNo: string; image: string }): Promise<void> {
+export async function saveKnownFace(face: { label: string; class: string; rollNo: string; images: string[] }): Promise<void> {
     const faces = await getKnownFaces();
     const existingFace = faces.find(f => f.label === face.label);
 
     if (existingFace) {
-        existingFace.images.push(face.image);
+        existingFace.images.push(...face.images); // Add new images to existing ones
         existingFace.class = face.class;
         existingFace.rollNo = face.rollNo;
     } else {
-        faces.push({ label: face.label, class: face.class, rollNo: face.rollNo, images: [face.image] });
+        faces.push({ label: face.label, class: face.class, rollNo: face.rollNo, images: face.images });
     }
     
     await fs.writeFile(dataFilePath, JSON.stringify(faces, null, 2));

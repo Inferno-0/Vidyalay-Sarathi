@@ -10,6 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader, Camera, SwitchCamera } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { getKnownFaces, saveKnownFace } from '@/app/actions';
+import { Progress } from '@/components/ui/progress';
 
 declare const faceapi: any;
 
@@ -27,6 +28,16 @@ interface FaceScannerProps {
   onFaceRecognized?: (name: string) => void;
 }
 
+const enrollmentSteps = [
+    "Look directly at the camera for a front-facing view.",
+    "Turn your head to the right for a side profile.",
+    "Turn your head to the left for the other side profile.",
+    "Tilt your head slightly up, focusing on your forehead.",
+    "Tilt your head slightly down, focusing on your chin.",
+    "Turn 45 degrees to the right to capture your jawline.",
+    "Turn 45 degrees to the left to capture your other jawline."
+];
+
 const FaceScanner: React.FC<FaceScannerProps> = ({ mode = 'enrollment', onFaceRecognized }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -34,8 +45,8 @@ const FaceScanner: React.FC<FaceScannerProps> = ({ mode = 'enrollment', onFaceRe
   const [isReady, setIsReady] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [newFaceData, setNewFaceData] = useState({ name: '', class: '', rollNo: ''});
-  const [capturedImage, setCapturedImage] = useState<string | null>(null);
-  const [unknownFaceDetected, setUnknownFaceDetected] = useState(false);
+  const [capturedImages, setCapturedImages] = useState<string[]>([]);
+  const [enrollmentStep, setEnrollmentStep] = useState(0);
   const [faceMatcher, setFaceMatcher] = useState<any>(null);
   const { toast } = useToast();
   const detectionInterval = useRef<NodeJS.Timeout>();
@@ -197,48 +208,32 @@ const FaceScanner: React.FC<FaceScannerProps> = ({ mode = 'enrollment', onFaceRe
       faceapi.matchDimensions(canvas, displaySize);
 
       const detections = await faceapi
-        .detectAllFaces(video, detectionOptions)
+        .detectSingleFace(video, detectionOptions)
         .withFaceLandmarks()
-        .withFaceDescriptors();
+        .withFaceDescriptor();
 
-      const resizedDetections = faceapi.resizeResults(detections, displaySize);
       const ctx = canvas.getContext('2d');
       if (!ctx) return;
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       
-      let foundUnknownFace = false;
-
-      if (resizedDetections.length > 0) {
-        if (faceMatcher) {
-          resizedDetections.forEach((detection: any) => {
-            const { descriptor, detection: det } = detection;
-            const bestMatch = faceMatcher.findBestMatch(descriptor);
-            const box = det.box;
+      if (detections) {
+        const resizedDetections = faceapi.resizeResults(detections, displaySize);
+        if (faceMatcher && mode === 'attendance') {
+            const bestMatch = faceMatcher.findBestMatch(resizedDetections.descriptor);
+            const box = resizedDetections.detection.box;
             const drawBox = new faceapi.draw.DrawBox(box, { 
               label: bestMatch.toString(),
               boxColor: bestMatch.label !== 'unknown' ? '#2ECC71' : '#E74C3C',
             });
             drawBox.draw(canvas);
-            
-            if (bestMatch.label === 'unknown') {
-              foundUnknownFace = true;
-            } else if (mode === 'attendance' && onFaceRecognized) {
+
+            if (bestMatch.label !== 'unknown' && onFaceRecognized) {
               onFaceRecognized(bestMatch.label);
             }
-          });
         } else {
-            foundUnknownFace = true;
-            resizedDetections.forEach((detection: any) => {
-                const box = detection.detection.box;
-                const drawBox = new faceapi.draw.DrawBox(box, { 
-                  label: 'unknown',
-                  boxColor: '#E74C3C',
-                });
-                drawBox.draw(canvas);
-            });
+            faceapi.draw.drawDetections(canvas, resizedDetections);
         }
       }
-      setUnknownFaceDetected(foundUnknownFace);
     }, 1500);
 
   }, [isDialogOpen, faceMatcher, mode, onFaceRecognized]);
@@ -257,20 +252,26 @@ const FaceScanner: React.FC<FaceScannerProps> = ({ mode = 'enrollment', onFaceRe
         }
         context.drawImage(video, 0, 0, canvas.width, canvas.height);
         const dataUrl = canvas.toDataURL('image/jpeg');
-        setCapturedImage(dataUrl);
-        setIsDialogOpen(true);
+        const newImages = [...capturedImages, dataUrl];
+        setCapturedImages(newImages);
+
+        if (enrollmentStep < enrollmentSteps.length - 1) {
+            setEnrollmentStep(prev => prev + 1);
+        } else {
+            setIsDialogOpen(true);
+        }
       }
     }
   };
 
   const handleSaveFace = async () => {
-    if (newFaceData.name && capturedImage) {
+    if (newFaceData.name && capturedImages.length === enrollmentSteps.length) {
         try {
             await saveKnownFace({
                 label: newFaceData.name,
                 class: newFaceData.class,
                 rollNo: newFaceData.rollNo,
-                image: capturedImage,
+                images: capturedImages,
             });
             
             await loadKnownFaces();
@@ -296,15 +297,18 @@ const FaceScanner: React.FC<FaceScannerProps> = ({ mode = 'enrollment', onFaceRe
   const closeDialog = () => {
     setIsDialogOpen(false);
     setNewFaceData({ name: '', class: '', rollNo: '' });
-    setCapturedImage(null);
+    setCapturedImages([]);
+    setEnrollmentStep(0);
   }
 
   const toggleCamera = useCallback(() => {
     setFacingMode(prevMode => prevMode === 'user' ? 'environment' : 'user');
   }, []);
 
+  const progress = (enrollmentStep / enrollmentSteps.length) * 100;
+
   return (
-    <div className="relative w-full h-full bg-card flex items-center justify-center">
+    <div className="relative w-full h-full bg-card flex flex-col items-center justify-center">
       {hasCameraPermission === false && (
          <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-background/80 backdrop-blur-sm p-4">
              <Alert variant="destructive" className="max-w-md">
@@ -323,15 +327,18 @@ const FaceScanner: React.FC<FaceScannerProps> = ({ mode = 'enrollment', onFaceRe
         </div>
       )}
 
-      <video
-        ref={videoRef}
-        onPlay={handlePlay}
-        autoPlay
-        muted
-        playsInline
-        className={`w-full h-full object-cover transition-opacity duration-500 ${isReady ? 'opacity-100' : 'opacity-0'} ${facingMode === 'user' ? 'transform -scale-x-100' : ''}`}
-      />
-      <canvas ref={canvasRef} className={`absolute inset-0 w-full h-full ${facingMode === 'user' ? 'transform -scale-x-100' : ''}`} />
+      <div className="relative w-full h-full">
+        <video
+          ref={videoRef}
+          onPlay={handlePlay}
+          autoPlay
+          muted
+          playsInline
+          className={`w-full h-full object-cover transition-opacity duration-500 ${isReady ? 'opacity-100' : 'opacity-0'} ${facingMode === 'user' ? 'transform -scale-x-100' : ''}`}
+        />
+        <canvas ref={canvasRef} className={`absolute inset-0 w-full h-full ${facingMode === 'user' ? 'transform -scale-x-100' : ''}`} />
+      </div>
+
       
       {isReady && hasCameraPermission && (
         <Button 
@@ -345,31 +352,32 @@ const FaceScanner: React.FC<FaceScannerProps> = ({ mode = 'enrollment', onFaceRe
         </Button>
       )}
 
-      {isReady && mode === 'enrollment' && unknownFaceDetected && !isDialogOpen && (
-         <Button 
-            onClick={handleCaptureFace}
-            className="absolute bottom-4 right-4 z-20 animate-pulse"
-            size="lg"
-            >
-            <Camera className="mr-2 h-5 w-5" />
-            Capture New Face
-        </Button>
+      {isReady && mode === 'enrollment' && !isDialogOpen && (
+        <div className="absolute bottom-4 left-4 right-4 z-20 bg-background/80 p-4 rounded-lg shadow-lg text-center backdrop-blur-sm">
+            <p className="text-lg font-semibold mb-2">Step {enrollmentStep + 1} of {enrollmentSteps.length}</p>
+            <p className="text-muted-foreground mb-4">{enrollmentSteps[enrollmentStep]}</p>
+            <Progress value={progress} className="w-full mb-4" />
+            <Button onClick={handleCaptureFace} size="lg">
+                <Camera className="mr-2 h-5 w-5" />
+                Capture Pose
+            </Button>
+        </div>
       )}
 
       <Dialog open={isDialogOpen} onOpenChange={closeDialog}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle>Save New Face</DialogTitle>
+            <DialogTitle>Save New Student</DialogTitle>
             <DialogDescription>
-              Enter the student's details. If the name already exists, this image will be added to their profile.
+              Enter the student's details. All 7 images will be saved to their profile.
             </DialogDescription>
           </DialogHeader>
+          <div className="grid grid-cols-3 gap-2 py-4">
+            {capturedImages.map((img, index) => (
+                <img key={index} src={img} alt={`Capture ${index + 1}`} className="rounded-md w-full h-auto object-cover" />
+            ))}
+          </div>
           <div className="grid gap-4 py-4">
-            {capturedImage && (
-                <div className="flex justify-center">
-                    <img src={capturedImage} alt="Captured face" className="rounded-md w-48 h-48 object-cover" />
-                </div>
-            )}
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="name" className="text-right">Name</Label>
               <Input id="name" value={newFaceData.name} onChange={(e) => setNewFaceData({...newFaceData, name: e.target.value})} className="col-span-3" placeholder="Student's full name" />
