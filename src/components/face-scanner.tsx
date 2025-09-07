@@ -22,7 +22,12 @@ interface KnownFaceData {
     images: string[];
 }
 
-const FaceScanner = () => {
+interface FaceScannerProps {
+  mode?: 'enrollment' | 'attendance';
+  onFaceRecognized?: (name: string) => void;
+}
+
+const FaceScanner: React.FC<FaceScannerProps> = ({ mode = 'enrollment', onFaceRecognized }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [loadingMessage, setLoadingMessage] = useState('Initializing...');
@@ -37,7 +42,6 @@ const FaceScanner = () => {
   const [facingMode, setFacingMode] = useState<'user' | 'environment'>('user');
   const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
 
-
   const loadModels = useCallback(async () => {
     if (typeof faceapi === 'undefined') {
         setLoadingMessage('FaceAPI script not loaded yet. Retrying...');
@@ -50,6 +54,7 @@ const FaceScanner = () => {
           faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
           faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
           faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL),
+          faceapi.nets.faceExpressionNet.loadFromUri(MODEL_URL),
         ]);
         return true;
     } catch (error) {
@@ -189,9 +194,9 @@ const FaceScanner = () => {
         const faceMatcher = new faceapi.FaceMatcher(knownFaces, 0.6);
         
         resizedDetections.forEach((detection: any) => {
-          const { descriptor } = detection;
+          const { descriptor, detection: det } = detection;
           const bestMatch = faceMatcher.findBestMatch(descriptor);
-          const box = detection.detection.box;
+          const box = det.box;
           const drawBox = new faceapi.draw.DrawBox(box, { 
             label: bestMatch.toString(),
             boxColor: bestMatch.label !== 'unknown' ? '#2ECC71' : '#E74C3C',
@@ -200,6 +205,8 @@ const FaceScanner = () => {
 
           if (bestMatch.label === 'unknown') {
             foundUnknownFace = true;
+          } else if (mode === 'attendance' && onFaceRecognized) {
+            onFaceRecognized(bestMatch.label);
           }
         });
       } else if (resizedDetections.length > 0) {
@@ -216,7 +223,7 @@ const FaceScanner = () => {
       setUnknownFaceDetected(foundUnknownFace);
     }, 1000);
 
-  }, [isDialogOpen, knownFaces]);
+  }, [isDialogOpen, knownFaces, mode, onFaceRecognized]);
 
   const handleCaptureFace = () => {
     if (videoRef.current) {
@@ -324,7 +331,7 @@ const FaceScanner = () => {
         </Button>
       )}
 
-      {isReady && unknownFaceDetected && !isDialogOpen && (
+      {isReady && mode === 'enrollment' && unknownFaceDetected && !isDialogOpen && (
          <Button 
             onClick={handleCaptureFace}
             className="absolute bottom-4 right-4 z-20 animate-pulse"
@@ -373,5 +380,3 @@ const FaceScanner = () => {
 };
 
 export default FaceScanner;
-
-    

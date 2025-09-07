@@ -5,12 +5,12 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { getKnownFaces, getAttendanceForStudent, takeAttendance } from '@/app/actions';
-import { Loader2, UserX, Plane, SwitchCamera } from 'lucide-react';
+import { Loader2, UserX, Plane } from 'lucide-react';
 import MainLayout from '@/components/main-layout';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
-import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
+import FaceScanner from '@/components/face-scanner'; // Import the scanner
 
 interface Student {
   label: string;
@@ -54,6 +54,9 @@ export default function AttendancePage() {
     try {
       await takeAttendance(studentId, formattedDate, status);
       setStudents(prev => prev.map(s => s.label === studentId ? { ...s, status } : s));
+      if (status === 'Present') {
+        markedPresentToday.current.add(studentId);
+      }
     } catch (error) {
         toast({ variant: 'destructive', title: 'Error', description: `Failed to mark ${studentId} as ${status}.` });
     }
@@ -73,16 +76,36 @@ export default function AttendancePage() {
         default: return <Badge variant="outline">Not Marked</Badge>;
     }
   };
+  
+  // Callback for when a face is recognized by the scanner
+  const onFaceRecognized = (name: string) => {
+    if (!markedPresentToday.current.has(name)) {
+      handleMarkAttendance(name, 'Present');
+      toast({
+        title: 'Attendance Marked',
+        description: `${name} has been marked as Present.`,
+      });
+    }
+  };
 
   return (
     <MainLayout title="Take Attendance">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 h-full">
+        <div className="flex flex-col h-[75vh]">
+          <Card className="flex-1 overflow-hidden">
+            <CardContent className="p-0 h-full">
+               <FaceScanner onFaceRecognized={onFaceRecognized} mode="attendance" />
+            </CardContent>
+          </Card>
+        </div>
+
         <div className="space-y-6">
             <Card>
                 <CardHeader>
                     <CardTitle>Student Roster</CardTitle>
                     <CardDescription>Attendance status for {format(date, 'PPP')}</CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-2 max-h-[75vh] overflow-y-auto">
+                <CardContent className="space-y-2 max-h-[65vh] overflow-y-auto">
                   {loading ? (
                      <div className="text-center py-8"><Loader2 className="h-8 w-8 animate-spin mx-auto" /></div>
                   ) : (
@@ -91,10 +114,10 @@ export default function AttendancePage() {
                            <span className="font-medium text-lg">{student.label}</span>
                            <div className="flex items-center gap-2">
                                 {getStatusBadge(student.status)}
-                                {student.status !== 'Present' && student.status !== 'Holiday' && (
+                                {student.status !== 'Holiday' && (
                                   <>
-                                    <Button size="sm" variant="destructive" onClick={() => handleMarkAttendance(student.label, 'Absent')}><UserX className="h-4 w-4" /></Button>
-                                    <Button size="sm" className="bg-blue-500 hover:bg-blue-600" onClick={() => handleMarkAttendance(student.label, 'Leave')}><Plane className="h-4 w-4" /></Button>
+                                    <Button size="sm" variant={student.status === 'Absent' ? "outline" : "destructive"} onClick={() => handleMarkAttendance(student.label, 'Absent')}><UserX className="h-4 w-4" /></Button>
+                                    <Button size="sm" variant={student.status === 'Leave' ? "secondary" : "outline"} className="bg-blue-500 hover:bg-blue-600 text-white" onClick={() => handleMarkAttendance(student.label, 'Leave')}><Plane className="h-4 w-4" /></Button>
                                   </>
                                 )}
                            </div>
@@ -104,6 +127,7 @@ export default function AttendancePage() {
                 </CardContent>
             </Card>
         </div>
+      </div>
     </MainLayout>
   );
 }
