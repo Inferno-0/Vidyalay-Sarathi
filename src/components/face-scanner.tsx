@@ -52,6 +52,7 @@ const FaceScanner: React.FC<FaceScannerProps> = ({ mode = 'enrollment', onFaceRe
     try {
         await Promise.all([
           faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL),
+          faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
           faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
           faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL),
           faceapi.nets.faceExpressionNet.loadFromUri(MODEL_URL),
@@ -113,7 +114,6 @@ const FaceScanner: React.FC<FaceScannerProps> = ({ mode = 'enrollment', onFaceRe
     let stream: MediaStream | null = null;
   
     const startVideo = async () => {
-      // Stop any existing stream
       if (videoRef.current && videoRef.current.srcObject) {
         (videoRef.current.srcObject as MediaStream).getTracks().forEach(track => track.stop());
       }
@@ -173,6 +173,10 @@ const FaceScanner: React.FC<FaceScannerProps> = ({ mode = 'enrollment', onFaceRe
         clearInterval(detectionInterval.current);
     }
 
+    const detectionOptions = mode === 'attendance'
+      ? new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.4 })
+      : new faceapi.SsdMobilenetv1Options({ minConfidence: 0.5 });
+
     detectionInterval.current = setInterval(async () => {
       if (!videoRef.current || videoRef.current.paused || videoRef.current.ended || typeof faceapi === 'undefined' || isDialogOpen) {
         return;
@@ -186,7 +190,7 @@ const FaceScanner: React.FC<FaceScannerProps> = ({ mode = 'enrollment', onFaceRe
       faceapi.matchDimensions(canvas, displaySize);
 
       const detections = await faceapi
-        .detectAllFaces(video, new faceapi.SsdMobilenetv1Options({ minConfidence: 0.5 }))
+        .detectAllFaces(video, detectionOptions)
         .withFaceLandmarks()
         .withFaceDescriptors();
 
@@ -383,5 +387,3 @@ const FaceScanner: React.FC<FaceScannerProps> = ({ mode = 'enrollment', onFaceRe
 };
 
 export default FaceScanner;
-
-    
