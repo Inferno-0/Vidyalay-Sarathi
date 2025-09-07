@@ -3,6 +3,7 @@
 
 import React from 'react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { Menu, Home, UserPlus, Users, CalendarCheck, BookUser } from 'lucide-react';
@@ -21,6 +22,8 @@ const navLinks = [
 ];
 
 export default function MainLayout({ children, title }: MainLayoutProps) {
+  const pathname = usePathname();
+
   return (
     <div className="flex flex-col min-h-screen bg-background">
       <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -41,7 +44,9 @@ export default function MainLayout({ children, title }: MainLayoutProps) {
                   <Link
                     key={link.href}
                     href={link.href}
-                    className="flex items-center gap-3 rounded-md px-3 py-2 text-lg font-medium text-foreground hover:bg-accent hover:text-accent-foreground"
+                    className={`flex items-center gap-3 rounded-md px-3 py-2 text-lg font-medium text-foreground transition-colors hover:bg-accent hover:text-accent-foreground ${
+                      pathname === link.href ? 'bg-accent text-accent-foreground' : ''
+                    }`}
                   >
                     <link.icon className="h-5 w-5" />
                     {link.label}

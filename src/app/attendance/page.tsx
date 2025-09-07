@@ -10,6 +10,7 @@ import MainLayout from '@/components/main-layout';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 
 declare const faceapi: any;
 const MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model/';
@@ -31,6 +32,7 @@ export default function AttendancePage() {
   const detectionInterval = useRef<NodeJS.Timeout>();
   const [knownFaces, setKnownFaces] = useState<any[]>([]);
   const markedPresentToday = useRef(new Set<string>());
+  const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
 
   // Load models and known faces
   const setupFaceScanner = useCallback(async () => {
@@ -68,21 +70,23 @@ export default function AttendancePage() {
       const stream = await navigator.mediaDevices.getUserMedia({ video: {} });
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
+        setHasCameraPermission(true);
       }
     } catch (err) {
       console.error('Error accessing camera:', err);
-      toast({ variant: 'destructive', title: 'Camera Error', description: 'Could not access the camera.' });
+      setHasCameraPermission(false);
+      toast({ variant: 'destructive', title: 'Camera Error', description: 'Could not access the camera. Please check permissions.' });
     }
   }, [toast]);
   
   const fetchStudentsAndAttendance = useCallback(async () => {
     setLoading(true);
     try {
-      const knownFaces = await getKnownFaces();
+      const knownFacesData = await getKnownFaces();
       const formattedDate = format(date, 'yyyy-MM-dd');
       
       const studentsWithAttendance = await Promise.all(
-        knownFaces.map(async (face) => {
+        knownFacesData.map(async (face) => {
           const status = await getAttendanceForStudent(face.label, formattedDate);
           if (status === 'Present') {
               markedPresentToday.current.add(face.label);
@@ -114,7 +118,6 @@ export default function AttendancePage() {
   const handleMarkAttendance = async (studentId: string, status: 'Present' | 'Absent' | 'Leave') => {
     const formattedDate = format(date, 'yyyy-MM-dd');
     await takeAttendance(studentId, formattedDate, status);
-    // Optimistic update
     setStudents(prev => prev.map(s => s.label === studentId ? { ...s, status } : s));
   };
   
@@ -177,6 +180,13 @@ export default function AttendancePage() {
                         <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2" />
                         <p>Initializing Scanner...</p>
                     </div>
+                ) : hasCameraPermission === false ? (
+                    <Alert variant="destructive">
+                      <AlertTitle>Camera Access Required</AlertTitle>
+                      <AlertDescription>
+                        Please allow camera access to use this feature.
+                      </AlertDescription>
+                    </Alert>
                 ) : (
                     <video ref={videoRef} autoPlay muted playsInline onPlay={handlePlay} className="w-full h-full object-cover transform scale-x-[-1]" />
                 )}
