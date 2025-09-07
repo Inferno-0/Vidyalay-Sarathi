@@ -5,7 +5,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { getKnownFaces, getAttendanceForStudent, takeAttendance } from '@/app/actions';
-import { Loader2, CheckCircle, XCircle, Plane, UserCheck, UserX, UserPlus } from 'lucide-react';
+import { Loader2, UserX, Plane } from 'lucide-react';
 import MainLayout from '@/components/main-layout';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
@@ -30,6 +30,7 @@ export default function AttendancePage() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const detectionInterval = useRef<NodeJS.Timeout>();
   const [knownFaces, setKnownFaces] = useState<any[]>([]);
+  const markedPresentToday = useRef(new Set<string>());
 
   // Load models and known faces
   const setupFaceScanner = useCallback(async () => {
@@ -83,6 +84,9 @@ export default function AttendancePage() {
       const studentsWithAttendance = await Promise.all(
         knownFaces.map(async (face) => {
           const status = await getAttendanceForStudent(face.label, formattedDate);
+          if (status === 'Present') {
+              markedPresentToday.current.add(face.label);
+          }
           return { ...face, status };
         })
       );
@@ -127,8 +131,8 @@ export default function AttendancePage() {
         for (const detection of detections) {
             const bestMatch = faceMatcher.findBestMatch(detection.descriptor);
             if (bestMatch.label !== 'unknown') {
-                const student = students.find(s => s.label === bestMatch.label);
-                if (student && student.status !== 'Present') {
+                if (!markedPresentToday.current.has(bestMatch.label)) {
+                    markedPresentToday.current.add(bestMatch.label);
                     handleMarkAttendance(bestMatch.label, 'Present');
                     toast({
                       title: 'Attendance Marked',
@@ -139,7 +143,7 @@ export default function AttendancePage() {
             }
         }
     }, 2000);
-  }, [knownFaces, students, toast]);
+  }, [knownFaces, toast]);
 
   useEffect(() => {
     if (isScannerReady) {
@@ -159,7 +163,7 @@ export default function AttendancePage() {
 
   return (
     <MainLayout title="Take Attendance">
-      <div className="w-full grid lg:grid-cols-2 gap-8">
+      <div className="w-full grid grid-cols-1 lg:grid-cols-2 gap-8">
         <div className="space-y-6">
           <Card>
             <CardHeader>
