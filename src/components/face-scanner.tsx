@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Loader, Camera, SwitchCamera, UserCheck } from 'lucide-react';
+import { Loader, Camera, SwitchCamera, UserCheck, CheckCircle } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { getKnownFaces, saveKnownFace } from '@/app/actions';
 import { Progress } from '@/components/ui/progress';
@@ -213,35 +213,41 @@ const FaceScanner: React.FC<FaceScannerProps> = ({ mode = 'enrollment', onFaceRe
             const bestMatch = faceMatcher.findBestMatch(resizedDetections.descriptor);
             const box = resizedDetections.detection.box;
             
-            if (bestMatch.label !== 'unknown') {
-                const isAlreadyProcessed = recognizedLabels.has(bestMatch.label);
-                
+            const isKnown = bestMatch.label !== 'unknown';
+            const isAlreadyProcessed = recognizedLabels.has(bestMatch.label);
+
+            if (isKnown) {
                 if (mode === 'attendance') {
-                    const label = isAlreadyProcessed ? `${bestMatch.label} (Present)` : bestMatch.toString();
-                    const boxColor = isAlreadyProcessed ? '#2ECC71' : '#3498DB';
-                    const drawBox = new faceapi.draw.DrawBox(box, { label, boxColor });
-                    drawBox.draw(canvas);
-
                     if (isAlreadyProcessed) {
-                        ctx.fillStyle = 'rgba(46, 204, 113, 0.4)';
+                        // Persistently show green box for already marked students
+                        ctx.fillStyle = 'rgba(46, 204, 113, 0.4)'; // Semi-transparent green
                         ctx.fillRect(box.x, box.y, box.width, box.height);
-                    }
-
-                    if (!isAlreadyProcessed && onFaceRecognized) {
-                        onFaceRecognized(bestMatch.label);
+                        const drawBox = new faceapi.draw.DrawBox(box, { label: `${bestMatch.label} (Present)`, boxColor: '#2ECC71' });
+                        drawBox.draw(canvas);
+                        // Add a checkmark icon
+                        ctx.fillStyle = 'white';
+                        ctx.font = '24px Arial';
+                        ctx.fillText('✓', box.x + 10, box.y + 28);
+                    } else {
+                        // Regular green box for new recognition
+                        const drawBox = new faceapi.draw.DrawBox(box, { label: bestMatch.label, boxColor: '#3498DB' });
+                        drawBox.draw(canvas);
+                        if (onFaceRecognized) {
+                            onFaceRecognized(bestMatch.label);
+                        }
                     }
                 } else if (mode === 'enrollment') {
+                    // Always show the green box for an enrolled face
                     setAlreadyEnrolledMessage(`${bestMatch.label} is already enrolled.`);
                     const drawBox = new faceapi.draw.DrawBox(box, { label: bestMatch.label, boxColor: '#2ECC71' });
                     drawBox.draw(canvas);
                 }
-
             } else {
                  setAlreadyEnrolledMessage(null);
                 const drawBox = new faceapi.draw.DrawBox(box, { label: 'Unknown', boxColor: '#E74C3C' });
                 drawBox.draw(canvas);
             }
-        } else {
+        } else { // No faceMatcher loaded yet
             setAlreadyEnrolledMessage(null);
             faceapi.draw.drawDetections(canvas, resizedDetections);
         }
@@ -438,3 +444,5 @@ const FaceScanner: React.FC<FaceScannerProps> = ({ mode = 'enrollment', onFaceRe
 };
 
 export default FaceScanner;
+
+    
