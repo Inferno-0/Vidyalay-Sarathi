@@ -48,33 +48,32 @@ const getPose = (landmarks: any): Pose => {
     const leftEye = landmarks.getLeftEye();
     const rightEye = landmarks.getRightEye();
 
-    // Points for symmetry calculation (yaw)
-    const leftJaw = jawOutline[0];
-    const rightJaw = jawOutline[16];
+    // Points for yaw calculation
+    const leftJawPoint = jawOutline[0];
+    const rightJawPoint = jawOutline[16];
     const noseTip = nose[3];
 
     // Points for pitch calculation
-    const chin = jawOutline[8];
+    const jawBottom = jawOutline[8];
     const noseBridge = nose[0];
+    const eyeMidPointY = (leftEye[0].y + rightEye[0].y) / 2;
 
-    // Calculate yaw based on facial symmetry
-    const distLeft = Math.sqrt(Math.pow(noseTip.x - leftJaw.x, 2) + Math.pow(noseTip.y - leftJaw.y, 2));
-    const distRight = Math.sqrt(Math.pow(noseTip.x - rightJaw.x, 2) + Math.pow(noseTip.y - rightJaw.y, 2));
-    const yawRatio = distLeft / distRight;
+    // Yaw calculation (left/right turning)
+    const dLeft = Math.abs(noseTip.x - leftJawPoint.x);
+    const dRight = Math.abs(noseTip.x - rightJawPoint.x);
+    const yawRatio = dLeft / dRight;
 
-    // Calculate pitch based on vertical positions
-    const eyeMidY = (leftEye[0].y + rightEye[0].y) / 2;
-    const pitchRatio = (chin.y - eyeMidY) / (eyeMidY - noseBridge.y);
-    
-    // Determine pose
-    if (yawRatio > 1.8) return 'left';
+    // Pitch calculation (up/down tilting)
+    const pitchRatio = (jawBottom.y - eyeMidPointY) / (eyeMidPointY - noseBridge.y);
+
+    // Pose determination with tolerance
+    if (yawRatio > 2.0) return 'left';
     if (yawRatio < 0.5) return 'right';
 
-    if (pitchRatio > 6) return 'down';
-    if (pitchRatio < 2.5) return 'up';
+    if (pitchRatio > 6.0) return 'down';
+    if (pitchRatio < 3.0) return 'up';
 
-    // If not significantly turned or tilted, it's a front pose
-    if (yawRatio > 0.85 && yawRatio < 1.15) return 'front';
+    if (yawRatio > 0.8 && yawRatio < 1.2) return 'front';
 
     return 'unknown';
 };
@@ -242,10 +241,10 @@ const FaceScanner: React.FC<FaceScannerProps> = ({ mode = 'enrollment', onFaceRe
   }, [capturedImages.length, facingMode]);
 
   useEffect(() => {
-    if (mode === 'enrollment' && capturedImages.length === enrollmentSteps.length && !isDialogOpen) {
+    if (mode === 'enrollment' && capturedImages.length === enrollmentSteps.length && enrollmentSteps.length > 0 && !isDialogOpen) {
       setIsDialogOpen(true);
     }
-  }, [capturedImages, mode, isDialogOpen]);
+  }, [capturedImages, enrollmentStep, mode, isDialogOpen]);
 
   const handlePlay = useCallback(() => {
     setLoadingMessage('');
