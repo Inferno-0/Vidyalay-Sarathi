@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Calendar } from '@/components/ui/calendar';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { getKnownFaces, getAttendanceForDate } from '@/app/actions';
 import { Loader2 } from 'lucide-react';
 import MainLayout from '@/components/main-layout';
@@ -21,40 +21,32 @@ interface AttendanceRecord {
 }
 
 export default function AttendanceRegisterPage() {
-  const [date, setDate] = useState<Date>(new Date());
+  const [date] = useState(new Date()); // Date is now fixed to the current day
   const [students, setStudents] = useState<Student[]>([]);
   const [attendance, setAttendance] = useState<Record<string, AttendanceRecord['status']>>({});
   const [loading, setLoading] = useState(true);
 
-  const fetchStudents = useCallback(async () => {
-    try {
-      const knownFaces = await getKnownFaces();
-      setStudents(knownFaces);
-    } catch (error) {
-      console.error("Failed to load students:", error);
-    }
-  }, []);
-
-  const fetchAttendance = useCallback(async () => {
+  const fetchData = useCallback(async () => {
     setLoading(true);
     try {
+      const knownFaces = await getKnownFaces();
+      // Sort students by roll number
+      knownFaces.sort((a, b) => parseInt(a.rollNo, 10) - parseInt(b.rollNo, 10));
+      setStudents(knownFaces);
+
       const formattedDate = format(date, 'yyyy-MM-dd');
       const attendanceData = await getAttendanceForDate(formattedDate);
       setAttendance(attendanceData);
     } catch (error) {
-      console.error("Failed to load attendance:", error);
+      console.error("Failed to load data:", error);
     } finally {
       setLoading(false);
     }
   }, [date]);
 
   useEffect(() => {
-    fetchStudents();
-  }, [fetchStudents]);
-
-  useEffect(() => {
-    fetchAttendance();
-  }, [fetchAttendance, date]);
+    fetchData();
+  }, [fetchData]);
 
   const getStatusBadge = (status: AttendanceRecord['status']) => {
     switch (status) {
@@ -68,51 +60,49 @@ export default function AttendanceRegisterPage() {
 
   return (
     <MainLayout title="Attendance Register">
-      <div className="w-full grid grid-cols-1 md:grid-cols-3 gap-8">
-        <div className="md:col-span-1">
-          <Card>
-            <CardHeader>
-                <CardTitle>Select Date</CardTitle>
-            </CardHeader>
-            <CardContent className="flex justify-center">
-              <Calendar
-                mode="single"
-                selected={date}
-                onSelect={(newDate) => newDate && setDate(newDate)}
-                className="rounded-md border"
-                disabled={(day) => day > new Date() || day < new Date("2000-01-01")}
-              />
-            </CardContent>
-          </Card>
-        </div>
-
-        <div className="md:col-span-2">
-            <Card>
-                <CardHeader>
-                    <CardTitle>Attendance Report</CardTitle>
-                    <CardDescription>{format(date, 'PPP')}</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-2 max-h-[60vh] overflow-y-auto">
-                  {loading ? (
-                     <div className="text-center py-8"><Loader2 className="h-8 w-8 animate-spin mx-auto" /></div>
-                  ) : students.length === 0 ? (
-                    <p className="text-muted-foreground text-center py-8">No students enrolled yet.</p>
-                  ) : (
+      <div className="w-full">
+        <Card>
+          <CardHeader>
+            <CardTitle>Daily Attendance Report</CardTitle>
+            <CardDescription>Showing attendance for {format(date, 'PPP')}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {loading ? (
+              <div className="text-center py-8"><Loader2 className="h-8 w-8 animate-spin mx-auto" /></div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-[100px]">Roll No.</TableHead>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Class</TableHead>
+                    <TableHead className="text-right">Status</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {students.length > 0 ? (
                     students.map(student => (
-                        <div key={student.label} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                            <div>
-                                <p className="font-medium text-lg">{student.label}</p>
-                                <p className="text-sm text-muted-foreground">{`Class: ${student.class} | Roll: ${student.rollNo}`}</p>
-                            </div>
-                           <div className="flex items-center gap-2">
-                               {getStatusBadge(attendance[student.label] || 'Not Marked')}
-                           </div>
-                        </div>
+                      <TableRow key={student.rollNo}>
+                        <TableCell className="font-medium">{student.rollNo}</TableCell>
+                        <TableCell>{student.label}</TableCell>
+                        <TableCell>{student.class}</TableCell>
+                        <TableCell className="text-right">
+                          {getStatusBadge(attendance[student.label] || 'Not Marked')}
+                        </TableCell>
+                      </TableRow>
                     ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={4} className="h-24 text-center">
+                        No students enrolled yet.
+                      </TableCell>
+                    </TableRow>
                   )}
-                </CardContent>
-            </Card>
-        </div>
+                </TableBody>
+              </Table>
+            )}
+          </CardContent>
+        </Card>
       </div>
     </MainLayout>
   );
