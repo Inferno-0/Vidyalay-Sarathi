@@ -308,16 +308,14 @@ const FaceScanner: React.FC<FaceScannerProps> = ({ mode = 'enrollment', onFaceRe
   const progress = (enrollmentStep / enrollmentSteps.length) * 100;
 
   const renderEnrollmentControls = () => (
-    <div className="w-full md:w-1/3 md:pl-6 flex flex-col justify-center">
-        <div className="bg-muted/50 p-4 rounded-lg shadow-lg text-center backdrop-blur-sm">
-            <p className="text-lg font-semibold mb-2">Step {enrollmentStep + 1} of {enrollmentSteps.length}</p>
-            <p className="text-muted-foreground mb-4">{enrollmentSteps[enrollmentStep]}</p>
-            <Progress value={progress} className="w-full mb-4" />
-            <Button onClick={handleCaptureFace} size="lg" className="w-full">
-                <Camera className="mr-2 h-5 w-5" />
-                Capture Pose
-            </Button>
-        </div>
+    <div className="bg-muted/50 p-4 rounded-lg shadow-lg text-center backdrop-blur-sm">
+        <p className="text-lg font-semibold mb-2">Step {enrollmentStep + 1} of {enrollmentSteps.length}</p>
+        <p className="text-muted-foreground mb-4">{enrollmentSteps[enrollmentStep]}</p>
+        <Progress value={progress} className="w-full mb-4" />
+        <Button onClick={handleCaptureFace} size="lg" className="w-full">
+            <Camera className="mr-2 h-5 w-5" />
+            Capture Pose
+        </Button>
     </div>
   );
 
@@ -341,7 +339,7 @@ const FaceScanner: React.FC<FaceScannerProps> = ({ mode = 'enrollment', onFaceRe
          </div>
       )}
       
-      <div className={`relative w-full h-full flex flex-col ${mode === 'enrollment' ? 'md:w-2/3' : 'w-full'}`}>
+      <div className={`relative w-full h-full flex flex-col ${mode === 'enrollment' ? 'md:w-1/2' : 'w-full'}`}>
         <div className="relative w-full aspect-video">
           <video
             ref={videoRef}
@@ -372,7 +370,7 @@ const FaceScanner: React.FC<FaceScannerProps> = ({ mode = 'enrollment', onFaceRe
       </div>
 
       {isReady && mode === 'enrollment' && !isDialogOpen && (
-        <div className="hidden md:flex md:w-1/3">
+        <div className="hidden md:flex md:w-1/2 md:pl-6 flex-col justify-center">
            {renderEnrollmentControls()}
         </div>
       )}
