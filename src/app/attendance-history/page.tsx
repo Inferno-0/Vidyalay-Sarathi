@@ -10,11 +10,13 @@ import MainLayout from '@/components/main-layout';
 import { format } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 import { Calendar } from '@/components/ui/calendar';
+import Image from 'next/image';
 
 interface Student {
   label: string;
   class: string;
   rollNo: string;
+  images: string[];
 }
 
 interface AttendanceRecord {
@@ -91,6 +93,7 @@ export default function AttendanceRegisterPage() {
                   <Table>
                     <TableHeader>
                       <TableRow>
+                        <TableHead className="w-[80px]">Photo</TableHead>
                         <TableHead className="w-[100px]">Roll No.</TableHead>
                         <TableHead>Name</TableHead>
                         <TableHead>Class</TableHead>
@@ -101,6 +104,15 @@ export default function AttendanceRegisterPage() {
                       {students.length > 0 ? (
                         students.map(student => (
                           <TableRow key={student.rollNo}>
+                            <TableCell>
+                                <Image 
+                                    src={student.images[0]} 
+                                    alt={student.label}
+                                    width={40}
+                                    height={40}
+                                    className="rounded-full object-cover w-10 h-10"
+                                />
+                            </TableCell>
                             <TableCell className="font-medium">{student.rollNo}</TableCell>
                             <TableCell>{student.label}</TableCell>
                             <TableCell>{student.class}</TableCell>
@@ -111,7 +123,7 @@ export default function AttendanceRegisterPage() {
                         ))
                       ) : (
                         <TableRow>
-                          <TableCell colSpan={4} className="h-24 text-center">
+                          <TableCell colSpan={5} className="h-24 text-center">
                             No students enrolled yet.
                           </TableCell>
                         </TableRow>
@@ -126,4 +138,3 @@ export default function AttendanceRegisterPage() {
     </MainLayout>
   );
 }
-
