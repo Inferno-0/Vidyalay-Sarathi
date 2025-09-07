@@ -63,10 +63,7 @@ const FaceScanner = () => {
     if (videoRef.current && videoRef.current.srcObject) {
         const stream = videoRef.current.srcObject as MediaStream;
         stream.getTracks().forEach(track => track.stop());
-        videoRef.current.srcObject = null;
     }
-
-    await new Promise(resolve => setTimeout(resolve, 100));
     
     try {
         setLoadingMessage('Accessing camera...');
@@ -372,3 +369,5 @@ const FaceScanner = () => {
 };
 
 export default FaceScanner;
+
+    
