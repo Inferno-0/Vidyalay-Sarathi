@@ -23,19 +23,19 @@ export default function AttendancePage() {
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
-  const [markedPresentToday, setMarkedPresentToday] = useState(new Set<string>());
-  const processingRef = useRef(new Set<string>());
+  const [markedPresentToday, setMarkedPresentToday] = useState<Set<string>>(new Set());
+  const processingRef = useRef<Set<string>>(new Set());
 
   const fetchStudentsAndAttendance = useCallback(async (currentDate: Date) => {
     setLoading(true);
     try {
-      const knownFacesData = await getKnownFaces();
+      const knownFacesData: Omit<Student, 'status'>[] = await getKnownFaces();
       const formattedDate = format(currentDate, 'yyyy-MM-dd');
-      
+
       const newMarkedPresent = new Set<string>();
-      const studentsWithAttendance = await Promise.all(
+      const studentsWithAttendance: Student[] = await Promise.all(
         knownFacesData.map(async (face) => {
-          const status = await getAttendanceForStudent(face.label, formattedDate);
+          const status: Student['status'] = await getAttendanceForStudent(face.label, formattedDate);
           if (status === 'Present') {
             newMarkedPresent.add(face.label);
           }
@@ -56,12 +56,16 @@ export default function AttendancePage() {
     const formattedDate = format(date, 'yyyy-MM-dd');
     try {
       await takeAttendance(studentId, formattedDate, status);
-      
+
       // We optimistically update the UI
       setStudents(prev => prev.map(s => s.label === studentId ? { ...s, status } : s));
-      
+
       if (status === 'Present') {
-        setMarkedPresentToday(prev => new Set(prev).add(studentId));
+        setMarkedPresentToday(prev => {
+          const newSet = new Set(prev);
+          newSet.add(studentId);
+          return newSet;
+        });
       } else {
         setMarkedPresentToday(prev => {
           const newSet = new Set(prev);
@@ -70,9 +74,9 @@ export default function AttendancePage() {
         });
       }
     } catch (error) {
-        toast({ variant: 'destructive', title: 'Error', description: `Failed to mark ${studentId} as ${status}.` });
-        // Re-fetch to revert optimistic update on error
-        fetchStudentsAndAttendance(date); 
+      toast({ variant: 'destructive', title: 'Error', description: `Failed to mark ${studentId} as ${status}.` });
+      // Re-fetch to revert optimistic update on error
+      fetchStudentsAndAttendance(date);
     }
   }, [date, toast, fetchStudentsAndAttendance]);
   
@@ -102,7 +106,7 @@ export default function AttendancePage() {
     if (markedPresentToday.has(name) || processingRef.current.has(name)) {
       return;
     }
-    
+
     processingRef.current.add(name);
 
     handleMarkAttendance(name, 'Present');
@@ -110,7 +114,7 @@ export default function AttendancePage() {
       title: 'Attendance Marked',
       description: `${name} has been marked as Present.`,
     });
-    
+
     setTimeout(() => {
       processingRef.current.delete(name);
     }, 2000);

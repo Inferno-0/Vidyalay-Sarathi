@@ -26,7 +26,7 @@ export default function KnownFacesPage() {
   const [selectedFace, setSelectedFace] = useState<KnownFace | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [editFormData, setEditFormData] = useState({ name: '', class: '', rollNo: '' });
+  const [editFormData, setEditFormData] = useState<{ name: string; class: string; rollNo: string }>({ name: '', class: '', rollNo: '' });
   const { toast } = useToast();
 
   const loadFaces = useCallback(async () => {
@@ -109,43 +109,49 @@ export default function KnownFacesPage() {
 
   return (
     <MainLayout title="Known Faces">
-        {loading ? (
-          <div className="flex justify-center items-center py-10">
-            <Loader2 className="h-12 w-12 animate-spin text-primary" />
-            <p className="ml-4 text-lg">Loading faces...</p>
-          </div>
-        ) : knownFaces.length > 0 ? (
-          <div className="w-full space-y-4">
-            {knownFaces.map((face) => (
-                <Card key={face.label} className="w-full">
-                    <CardContent className="p-4 flex items-center justify-between">
-                       <div className="flex items-center gap-4">
-                            <img 
-                                src={face.images[0]} 
-                                alt={face.label}
-                                className="w-20 h-20 object-cover rounded-md"
-                            />
-                            <div>
-                                <p className="font-bold text-xl">{face.label}</p>
-                                <p className="text-muted-foreground">{`Class: ${face.class || 'N/A'} | Roll No: ${face.rollNo || 'N/A'}`}</p>
-                            </div>
-                       </div>
-                       <div className="flex gap-2">
-                           <Button variant="outline" size="icon" onClick={() => openEditDialog(face)}><Pencil className="h-4 w-4" /></Button>
-                           <Button variant="destructive" size="icon" onClick={() => openDeleteDialog(face)}><Trash2 className="h-4 w-4" /></Button>
-                       </div>
-                    </CardContent>
-                </Card>
-            ))}
-          </div>
-        ) : (
-          <Alert>
-            <AlertTitle>No Known Faces</AlertTitle>
-            <AlertDescription>
-              No faces have been saved yet. Go to the Add New Student page to enroll faces.
-            </AlertDescription>
-          </Alert>
-        )}
+      {loading ? (
+        <div className="flex justify-center items-center py-10">
+          <Loader2 className="h-12 w-12 animate-spin text-primary" />
+          <p className="ml-4 text-lg">Loading faces...</p>
+        </div>
+      ) : knownFaces.length > 0 ? (
+        <div className="w-full space-y-4">
+          {knownFaces.map((face) => (
+            <Card key={face.label} className="w-full">
+              <CardContent className="p-4 flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  {face.images && face.images[0] ? (
+                    <img
+                      src={face.images[0]}
+                      alt={face.label}
+                      className="w-20 h-20 object-cover rounded-md"
+                    />
+                  ) : (
+                    <div className="w-20 h-20 flex items-center justify-center bg-gray-200 rounded-md text-gray-500">
+                      N/A
+                    </div>
+                  )}
+                  <div>
+                    <p className="font-bold text-xl">{face.label}</p>
+                    <p className="text-muted-foreground">{`Class: ${face.class || 'N/A'} | Roll No: ${face.rollNo || 'N/A'}`}</p>
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <Button variant="outline" size="icon" onClick={() => openEditDialog(face)}><Pencil className="h-4 w-4" /></Button>
+                  <Button variant="destructive" size="icon" onClick={() => openDeleteDialog(face)}><Trash2 className="h-4 w-4" /></Button>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      ) : (
+        <Alert>
+          <AlertTitle>No Known Faces</AlertTitle>
+          <AlertDescription>
+            No faces have been saved yet. Go to the Add New Student page to enroll faces.
+          </AlertDescription>
+        </Alert>
+      )}
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={isDeleteDialogOpen} onOpenChange={() => setIsDeleteDialogOpen(false)}>

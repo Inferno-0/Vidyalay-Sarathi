@@ -33,7 +33,7 @@ export default function AttendanceRegisterPage() {
     setLoading(true);
     try {
       const knownFaces = await getKnownFaces();
-      knownFaces.sort((a, b) => parseInt(a.rollNo, 10) - parseInt(b.rollNo, 10));
+      knownFaces.sort((a: Student, b: Student) => parseInt(a.rollNo, 10) - parseInt(b.rollNo, 10));
       setStudents(knownFaces);
 
       const formattedDate = format(selectedDate, 'yyyy-MM-dd');
@@ -45,7 +45,7 @@ export default function AttendanceRegisterPage() {
       setLoading(false);
     }
   }, []);
-  
+
   useEffect(() => {
     setDate(new Date());
   }, []);
@@ -70,75 +70,81 @@ export default function AttendanceRegisterPage() {
     <MainLayout title="Attendance Register">
       <div className="w-full grid grid-cols-1 md:grid-cols-3 gap-8">
         <div className="md:col-span-1">
-           <Card>
-             <CardContent className="p-0">
-                {date && (
-                    <Calendar
-                        mode="single"
-                        selected={date}
-                        onSelect={setDate}
-                        fromDate={new Date('2025-08-01')}
-                        className="rounded-md w-full"
-                    />
-                )}
-             </CardContent>
-           </Card>
+          <Card>
+            <CardContent className="p-0">
+              {date && (
+                <Calendar
+                  mode="single"
+                  selected={date}
+                  onSelect={setDate}
+                  fromDate={new Date('2025-08-01')}
+                  className="rounded-md w-full"
+                />
+              )}
+            </CardContent>
+          </Card>
         </div>
         <div className="md:col-span-2">
-            <Card>
-              <CardHeader>
-                <CardTitle>Daily Attendance Report</CardTitle>
-                <CardDescription>
-                  Showing attendance for {date ? format(date, 'PPP') : 'Loading date...'}
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {loading || !date ? (
-                  <div className="text-center py-8"><Loader2 className="h-8 w-8 animate-spin mx-auto" /></div>
-                ) : (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="w-[80px]">Photo</TableHead>
-                        <TableHead className="w-[100px]">Roll No.</TableHead>
-                        <TableHead>Name</TableHead>
-                        <TableHead>Class</TableHead>
-                        <TableHead className="text-right">Status</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {students.length > 0 ? (
-                        students.map(student => (
-                          <TableRow key={student.rollNo}>
-                            <TableCell>
-                                <Image 
-                                    src={student.images[0]} 
-                                    alt={student.label}
-                                    width={40}
-                                    height={40}
-                                    className="rounded-full object-cover w-10 h-10"
-                                />
-                            </TableCell>
-                            <TableCell className="font-medium">{student.rollNo}</TableCell>
-                            <TableCell>{student.label}</TableCell>
-                            <TableCell>{student.class}</TableCell>
-                            <TableCell className="text-right">
-                              {getStatusBadge(attendance[student.label] || 'Not Marked')}
-                            </TableCell>
-                          </TableRow>
-                        ))
-                      ) : (
-                        <TableRow>
-                          <TableCell colSpan={5} className="h-24 text-center">
-                            No students enrolled yet.
+          <Card>
+            <CardHeader>
+              <CardTitle>Daily Attendance Report</CardTitle>
+              <CardDescription>
+                Showing attendance for {date ? format(date, 'PPP') : 'Loading date...'}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {loading || !date ? (
+                <div className="text-center py-8"><Loader2 className="h-8 w-8 animate-spin mx-auto" /></div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-[80px]">Photo</TableHead>
+                      <TableHead className="w-[100px]">Roll No.</TableHead>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Class</TableHead>
+                      <TableHead className="text-right">Status</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {students.length > 0 ? (
+                      students.map(student => (
+                        <TableRow key={student.rollNo}>
+                          <TableCell>
+                            {student.images && student.images[0] ? (
+                              <Image
+                                src={student.images[0]}
+                                alt={student.label}
+                                width={40}
+                                height={40}
+                                className="rounded-full object-cover w-10 h-10"
+                              />
+                            ) : (
+                              <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-gray-500">
+                                N/A
+                              </div>
+                            )}
+                          </TableCell>
+                          <TableCell className="font-medium">{student.rollNo}</TableCell>
+                          <TableCell>{student.label}</TableCell>
+                          <TableCell>{student.class}</TableCell>
+                          <TableCell className="text-right">
+                            {getStatusBadge(attendance[student.label] || 'Not Marked')}
                           </TableCell>
                         </TableRow>
-                      )}
-                    </TableBody>
-                  </Table>
-                )}
-              </CardContent>
-            </Card>
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={5} className="h-24 text-center">
+                          No students enrolled yet.
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
         </div>
       </div>
     </MainLayout>
