@@ -1,5 +1,4 @@
-# Firebase Studio
+#Face Recognition Attendance Application
 
-This is a NextJS starter in Firebase Studio.
-
+This a Face Recognition Attendance Tracking Application
 To get started, take a look at src/app/page.tsx.
