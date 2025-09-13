@@ -1,18 +1,32 @@
 {
   "Saranga": {
     "2025-09-08": "Present",
-    "2025-09-10": "Present"
+    "2025-09-10": "Present",
+    "2025-09-11": "Present",
+    "2025-09-13": "Present"
   },
   "debo": {
-    "2025-09-10": "Present"
+    "2025-09-10": "Present",
+    "2025-09-11": "Present",
+    "2025-09-13": "Present"
   },
   "khushi": {
-    "2025-09-10": "Present"
+    "2025-09-10": "Present",
+    "2025-09-11": "Present"
   },
   "tupper": {
-    "2025-09-10": "Present"
+    "2025-09-10": "Present",
+    "2025-09-11": "Present",
+    "2025-09-13": "Present"
   },
   "sky": {
     "2025-09-10": "Present"
+  },
+  "dhrupad": {
+    "2025-09-11": "Present",
+    "2025-09-13": "Present"
+  },
+  "Dhantu Buragohain": {
+    "2025-09-13": "Present"
   }
 }
