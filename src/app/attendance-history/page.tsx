@@ -18,16 +18,72 @@ interface Student {
   rollNo: string;
   images: string[];
 }
+// ...existing code...
 
 interface AttendanceRecord {
   status: 'Present' | 'Absent' | 'Leave' | 'Holiday' | 'Not Marked';
 }
+// ...existing code...
+// ...existing code...
 
-export default function AttendanceRegisterPage() {
+// Helper to get all dates in current month up to today
+// ...existing code...
+
+// Helper to get all dates in current month up to today
+function getDatesInCurrentMonth() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth();
+  const today = now.getDate();
+  const dates: Date[] = [];
+  for (let d = 1; d <= today; d++) {
+    dates.push(new Date(year, month, d));
+  }
+  return dates;
+}
+
+export default function AttendanceRegister() {
   const [date, setDate] = useState<Date | undefined>(undefined);
   const [students, setStudents] = useState<Student[]>([]);
   const [attendance, setAttendance] = useState<Record<string, AttendanceRecord['status']>>({});
   const [loading, setLoading] = useState(true);
+  const [monthlyAttendance, setMonthlyAttendance] = useState<Record<string, { present: number; total: number; percent: number }>>({});
+
+  // Fetch attendance for all days in current month (excluding holidays)
+  const fetchMonthlyAttendance = useCallback(async (knownFaces: Student[]) => {
+    const dates = getDatesInCurrentMonth();
+    const studentStats: Record<string, { present: number; total: number; percent: number }> = {};
+    knownFaces.forEach(s => {
+      studentStats[s.label] = { present: 0, total: 0, percent: 0 };
+    });
+
+    for (const d of dates) {
+      const formatted = format(d, 'yyyy-MM-dd');
+      try {
+        const att = await getAttendanceForDate(formatted);
+        // If the day is a holiday for all, skip
+        const isHoliday = Object.values(att).every(status => status === 'Holiday');
+        if (isHoliday) continue;
+        // For each student, count present/total (excluding holidays)
+        knownFaces.forEach(s => {
+          const status = att[s.label] || 'Not Marked';
+          if (status !== 'Holiday') {
+            studentStats[s.label].total++;
+            if (status === 'Present') studentStats[s.label].present++;
+          }
+        });
+      } catch (e) {
+        // If error, skip this day
+        continue;
+      }
+    }
+    // Calculate percent
+    Object.keys(studentStats).forEach(label => {
+      const { present, total } = studentStats[label];
+      studentStats[label].percent = total > 0 ? Math.round((present / total) * 100) : 0;
+    });
+    setMonthlyAttendance(studentStats);
+  }, []);
 
   const fetchData = useCallback(async (selectedDate: Date) => {
     setLoading(true);
@@ -36,15 +92,19 @@ export default function AttendanceRegisterPage() {
       knownFaces.sort((a: Student, b: Student) => parseInt(a.rollNo, 10) - parseInt(b.rollNo, 10));
       setStudents(knownFaces);
 
+      // Fetch daily attendance
       const formattedDate = format(selectedDate, 'yyyy-MM-dd');
       const attendanceData = await getAttendanceForDate(formattedDate);
       setAttendance(attendanceData);
+
+      // Fetch monthly attendance
+      await fetchMonthlyAttendance(knownFaces);
     } catch (error) {
       console.error("Failed to load data:", error);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [fetchMonthlyAttendance]);
 
   useEffect(() => {
     setDate(new Date());
@@ -126,7 +186,12 @@ export default function AttendanceRegisterPage() {
                             )}
                           </TableCell>
                           <TableCell className="font-medium">{student.rollNo}</TableCell>
-                          <TableCell>{student.label}</TableCell>
+                          <TableCell>
+                            {student.label}
+                            {typeof monthlyAttendance[student.label]?.percent === 'number' && (
+                              <span className="ml-2 text-xs text-gray-500">({monthlyAttendance[student.label].percent}% this month)</span>
+                            )}
+                          </TableCell>
                           <TableCell>{student.class}</TableCell>
                           <TableCell className="text-right">
                             {getStatusBadge(attendance[student.label] || 'Not Marked')}
