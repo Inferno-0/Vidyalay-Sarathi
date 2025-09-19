@@ -100,7 +100,7 @@ class AIService:
 
 # Create a singleton instance with your API key
 # For development, you can hardcode it temporarily, but use environment variables for production
-ai = AIService(api_key="AIzaSyA0QL453JAvieHZLzirT8F957aaK7zFLjk")
+ai = AIService(api_key="AIzaSyA0QL453JAvieHZLzirT8F957aaK7zFLj") #k
 
 # Alternative factory function (similar to the original genkit approach)
 def create_ai_service(api_key: Optional[str] = None) -> AIService:
